@@ -1,0 +1,98 @@
+services:
+  redis:
+    image: redis:7-alpine
+    command: [redis-server, --appendonly, 'yes']
+    expose: ['6379']
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [dhrash]
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-dhrash}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dhrash}
+      POSTGRES_DB: ${POSTGRES_DB:-dhrash}
+    expose: ['5432']
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [dhrash]
+  api:
+    build: ./backend
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      DATABASE_URL: postgresql://${POSTGRES_USER:-dhrash}:${POSTGRES_PASSWORD:-dhrash}@postgres:5432/${POSTGRES_DB:-dhrash}
+      JOURNAL_PATH: /data/alerts.sqlite3
+      PASSIVE_UDP_PORT: '2055'
+      PASSIVE_PUBLIC_HOST: ${PASSIVE_BIND_HOST:-127.0.0.1}
+      PASSIVE_PUBLIC_PORT: ${PASSIVE_UDP_PORT:-2055}
+      MODEL_ADAPTER: ${MODEL_ADAPTER:-}
+    expose: ['8000', '2055/udp']
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    read_only: true
+    dns: ['127.0.0.1']
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    volumes:
+      - alert_journal:/data
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD, python, -c, "import json, urllib.request; assert json.load(urllib.request.urlopen('http://localhost:8000/health', timeout=5))['journal']"]
+      interval: 15s
+      timeout: 6s
+      retries: 5
+    networks: [dhrash]
+  report-service:
+    build: ./backend
+    command: [uvicorn, 'report_worker:app', --host, 0.0.0.0, --port, '8010', --no-access-log]
+    environment:
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_REPORT_MODEL: ${GEMINI_REPORT_MODEL:-gemini-3.5-flash-lite}
+    expose: ['8010']
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    read_only: true
+    tmpfs: ['/tmp:size=32m,mode=1777']
+    restart: unless-stopped
+    networks: [dhrash, management]
+  ingress:
+    build: ./ingress
+    ports:
+      - '${API_BIND_HOST:-127.0.0.1}:${API_PORT:-8000}:8000'
+      - '${PASSIVE_BIND_HOST:-127.0.0.1}:${PASSIVE_UDP_PORT:-2055}:2055/udp'
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    read_only: true
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    networks: [dhrash, management]
+networks:
+  dhrash:
+    driver: bridge
+    internal: true
+  management:
+    driver: bridge
+volumes:
+  pg_data:
+  redis_data:
+  alert_journal:
