@@ -16,7 +16,8 @@ import redis
 import anyio
 from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect, UploadFile, File, Form
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse, Response
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, JSONResponse, Response
 from psycopg2.extras import Json, RealDictCursor
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, field_validator, model_validator
 from ingest import Pipeline, PassiveCollector
@@ -402,6 +403,8 @@ async def report_download(report_id: str, format: Literal["json", "text"] = "jso
                     headers={"Content-Disposition": f'attachment; filename="drashta-report-{report["id"]}.json"'})
 
 
+app.mount("/assets", StaticFiles(directory=Path(__file__).parent / "static"), name="dashboard-assets")
+
 @app.exception_handler(RequestValidationError)
 async def validation_error(request, exc):
     # Invalid NaN/Infinity inputs must produce 422, not fail while serializing
@@ -411,8 +414,8 @@ async def validation_error(request, exc):
 
 
 @app.get("/")
-async def service_info():
-    return {"service": "Dhrashta backend", "docs": "/docs", "health": "/health"}
+async def dashboard():
+    return FileResponse(Path(__file__).parent / "static" / "index.html", headers={"Cache-Control": "no-cache"})
 
 
 @app.get("/health")

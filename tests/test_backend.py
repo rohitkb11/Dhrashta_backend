@@ -5,6 +5,7 @@ from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
+from html.parser import HTMLParser
 from pathlib import Path
 from uuid import uuid4
 
@@ -109,14 +110,36 @@ def test_nonfinite_and_malformed_json_return_422(client, raw):
     assert pg_count() == 0
 
 
-def test_health_service_and_api_documentation(client):
+def test_health_dashboard_and_api_documentation(client):
     health = client.get("/health").json()
     assert all(health[key] is True for key in ("ok", "postgres", "redis", "journal"))
     assert health["pending_postgres"] == health["pending_redis"] == 0
     page = client.get("/")
-    assert page.status_code == 200 and page.json() == {"service":"Dhrashta backend", "docs":"/docs", "health":"/health"}
-    assert client.get("/assets/charts.js").status_code == 404
+    assert page.status_code == 200 and "text/html" in page.headers["content-type"]
+    assert "DRASHTA" in page.text and page.headers["cache-control"] == "no-cache"
     assert client.get("/docs").status_code == 200
+
+
+def test_dashboard_navigation_targets_are_unique_sections():
+    # A duplicate section/button ID previously hid the System status view.
+    class DashboardParser(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.ids, self.views, self.sections = [], [], set()
+
+        def handle_starttag(self, tag, attrs):
+            attrs = dict(attrs)
+            if "id" in attrs:
+                self.ids.append(attrs["id"])
+                if tag == "section":
+                    self.sections.add(attrs["id"])
+            if "data-view" in attrs:
+                self.views.append(attrs["data-view"])
+
+    parser = DashboardParser()
+    parser.feed((Path(receiver.__file__).parent / "static" / "index.html").read_text())
+    assert not [key for key, count in Counter(parser.ids).items() if count > 1]
+    assert parser.views and all("view-" + view in parser.sections for view in parser.views)
 
 
 def test_stats_threshold_and_class_counts(client):

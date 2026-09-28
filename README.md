@@ -1,6 +1,6 @@
 # Dhrashta backend
 
-Backend-only export of the verified prototype at source commit `ff7cf4a` from `codeWith-Ashwani/SIH_Dhrashta`. No dashboard, static assets, sample preview, model artifact, secrets or stored traffic are included.
+Backend and frontend export of the verified prototype from `codeWith-Ashwani/SIH_Dhrashta`. The dashboard is included under `backend/static` and served by the API. No model artifact, secrets or stored traffic are included.
 
 Includes FastAPI management APIs, immutable passive inputs, PCAP/PCAPNG and NetFlow/IPFIX/sFlow decoding, basic feature extraction, detector integration, durable alert history/WebSocket delivery, analytics endpoints, and a separate Gemini report worker. The supplied detection model is still required.
 
@@ -12,7 +12,7 @@ Copy `.env.example` to `.env`, configure local settings, then run:
 docker compose up -d --build
 ```
 
-Management API: http://localhost:8000/docs. Health: http://localhost:8000/health. `/` returns JSON service metadata. Passive UDP defaults to localhost:2055 and starts paused; enable using `POST /api/monitor` with `{"active":true}`. Management HTTP is separate from one-way production observations.
+Dashboard: http://localhost:8000/. Management API: http://localhost:8000/docs. Health: http://localhost:8000/health. The dashboard has a browser-only Sample preview and an Actual input mode; sample records do not enter backend storage. Passive UDP defaults to localhost:2055 and starts paused; enable using `POST /api/monitor` with `{"active":true}`. Management HTTP is separate from one-way production observations.
 
 If another prototype is running, choose unused `API_PORT` and `PASSIVE_UDP_PORT` values. Compose networks are project-scoped. Keep one Uvicorn worker for in-process WebSocket fan-out. Persistent volumes contain Postgres, Redis and the local durable journal; do not remove volumes unless intentionally deleting stored data.
 
@@ -31,4 +31,4 @@ docker compose -p dhrashta-backend-test -f docker-compose.tests.yml run --build 
 docker compose -p dhrashta-backend-test -f docker-compose.tests.yml down
 ```
 
-Tests use isolated Postgres/Redis and disposable journal data. Provider responses and detection labels are test fixtures; no real classifier or live Gemini request is used. Dashboard asset tests are excluded, while backend history, integration, report and receive-only ingest checks are retained.
+Tests use isolated Postgres/Redis and disposable journal data. Provider responses and detection labels are test fixtures; no real classifier or live Gemini request is used. Dashboard asset/navigation tests and Node preview/chart checks are included alongside backend history, integration, report and receive-only ingest checks. Run `node tests/test-preview.cjs` and `node tests/test-threats.cjs` for browser fixture and six-category evidence mapping checks.

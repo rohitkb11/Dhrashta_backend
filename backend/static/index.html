@@ -1,0 +1,1561 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="description" content="Drashta network threat alert dashboard for agency operations.">
+  <title>Drashta | Operations dashboard</title>
+  <style>
+    :root {
+      color-scheme: light; font-family: Inter, "Segoe UI", system-ui, sans-serif;
+      --bg: #eef3f9; --card: #ffffff; --line: #d6e1ee; --muted: #52647b;
+      --text: #182b43; --cyan: #177bb5; --green: #18866d; --red: #d84260;
+      --orange: #d88a27; --yellow: #278bb4; --violet: #7953cc;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 320px; background: var(--bg); color: var(--text); font-size: 18px; line-height: 1.5; }
+    button, input, select { font: inherit; }
+    button, a, summary { -webkit-tap-highlight-color: transparent; }
+    button { cursor: pointer; }
+    button:disabled { cursor: default; opacity: .5; }
+    button, input, select { border: 1px solid var(--line); border-radius: 6px; }
+    button { color: var(--text); background: #edf2f6; padding: 10px 16px; }
+    button:hover:not(:disabled) { border-color: #8a9cad; background: #e1eaf1; }
+    :focus-visible { outline: 3px solid var(--cyan); outline-offset: 3px; }
+    a { color: var(--cyan); text-underline-offset: 4px; }
+    h1, h2, h3, p { margin: 0; }
+    h1 { font-size: 30px; font-weight: 650; line-height: 1.25; letter-spacing: -.6px; }
+    h2 { font-size: 22px; font-weight: 600; }
+    h3 { font-size: 19px; font-weight: 600; }
+    code, pre { font-family: Consolas, "SFMono-Regular", monospace; font-size: 16px; }
+    [hidden] { display: none !important; }
+    .muted, .note { color: var(--muted); }
+    .note { font-size: 16px; }
+    .skip-link { position: fixed; left: 16px; top: -80px; z-index: 20; padding: 12px; background: var(--card); }
+    .skip-link:focus { top: 12px; }
+    .console-header { position: sticky; top: 0; z-index: 10; background: #102c48; color: white; border-bottom: 1px solid var(--line); }
+    .brand-row { max-width: 1680px; margin: 0 auto; padding: 18px 30px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+    .brand { display: flex; align-items: center; gap: 12px; font-size: 24px; font-weight: 700; letter-spacing: 1px; }
+    .brand svg { width: 32px; height: 36px; color: #6ed3e8; flex-shrink: 0; }
+    .brand-note { color: #bcd2e7; font-size: 17px; }
+    .header-controls { margin-left:auto; display:flex; align-items:center; justify-content:flex-end; gap:24px; flex-wrap:wrap; }
+    .network-rate { display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:6px 14px; font-size:17px; }
+    .network-rate strong { color:#b2edf2; font-weight:600; white-space:nowrap; }
+    .network-rate-status { flex-basis:100%; text-align:right; color:#c5d4e3; }
+    .network-rate-status.receiving { color:#83e6bd; }
+    .network-rate-status.preview { color:#d4bfff; }
+    .threat-categories { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px; margin:18px 0 24px; }
+    .threat-category { text-align:left; padding:22px; background:white; border-top:4px solid var(--category-color); display:grid; gap:10px; }
+    .threat-category > span:first-child { color:var(--category-color); font-size:22px; font-weight:600; }
+    .threat-category strong { font-size:26px; }
+    .threat-category[aria-pressed="true"] { outline:2px solid var(--category-color); outline-offset:2px; }
+    #threat-specialized { scroll-margin-top:180px; }
+    .specialized-metrics { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; margin:22px 0; }
+    .specialized-metrics > .panel { margin:0; min-width:0; }
+    .evidence-average { font-size:26px; }
+    .metadata-item { padding:12px 0; border-bottom:1px solid var(--line); }
+    .metadata-value { display:block; overflow-wrap:anywhere; white-space:pre-wrap; max-height:160px; overflow:auto; }
+    @media(max-width:1150px) { .brand-row > .brand-note { display:none; } }
+    @media(max-width:720px) { .header-controls { width:100%; justify-content:space-between; gap:14px; } .network-rate { order:2; justify-content:flex-start; } .network-rate-status { text-align:left; } .threat-categories,.specialized-metrics { grid-template-columns:1fr; } #threat-specialized { scroll-margin-top:260px; } }
+    .navigation-border { border-top: 1px solid #244260; background: #fff; }
+    .navigation-row { max-width: 1620px; margin: 0 auto; width: calc(100% - 60px); display: flex; align-items: center; gap: 6px; }
+    .dashboard-nav { display: flex; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: thin; scroll-padding: 8px; }
+    .nav-button { flex: 0 0 auto; display: flex; align-items: center; background: transparent; border: 0; border-bottom: 3px solid transparent; border-radius: 0; padding: 15px 16px 12px; white-space: nowrap; color: #42536a; font-size: 18px; }
+    .nav-button svg { display: none; }
+    .nav-button:hover:not(:disabled) { border-color: #b8c5d1; background: #f0f4f7; }
+    .nav-button[aria-current="page"] { background: #edf6f8; border-bottom-color: var(--cyan); color: var(--cyan); font-weight: 600; }
+    .nav-button[aria-current="page"]:hover:not(:disabled) { background: #e5f1f5; border-bottom-color: var(--cyan); }
+    .nav-button:focus-visible { outline-offset: -4px; }
+    .nav-scroll { flex: 0 0 40px; width: 40px; height: 40px; padding: 8px; background: var(--card); }
+    .nav-scroll svg { display: block; width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; }
+    .workspace { max-width: 1680px; margin: 0 auto; padding: 28px 30px 40px; }
+    .topbar { display: flex; justify-content: space-between; align-items: center; gap: 24px; margin-bottom: 25px; }
+    .topbar p { margin-top: 8px; color: var(--muted); }
+    .clock { text-align: right; font-size: 17px; white-space: nowrap; }
+    .clock span { display: block; color: var(--muted); font-size: 16px; margin-top: 3px; }
+    .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 15px; margin-bottom: 24px; }
+    .metric { background: #f6fbff; border: 1px solid var(--line); border-top: 4px solid #278bb4; border-radius: 8px; padding: 18px 20px; min-height: 144px; }
+    .metric:nth-child(2) { background:#fff6f8; border-top-color:var(--red); }
+    .metric:nth-child(3) { background:#f8f5ff; border-top-color:var(--violet); }
+    .metric:nth-child(4) { background:#f0faf6; border-top-color:var(--green); }
+    .metric-label { color: #526174; font-size: 17px; }
+    .metric-value { display: block; font-size: 36px; font-weight: 600; line-height: 1.3; margin: 8px 0; letter-spacing: -.5px; }
+    .metric-value.connection { display: flex; align-items: center; gap: 10px; font-size: 23px; letter-spacing: 0; min-height: 47px; }
+    .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--yellow); flex-shrink: 0; }
+    .dot.good { background: var(--green); }
+    .dot.bad { background: var(--red); }
+    .connection.good { color: var(--green); }
+    .connection.waiting { color: var(--yellow); }
+    .page-actions { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 18px; margin-bottom: 22px; }
+    .actions { display: flex; gap: 10px; align-items: center; }
+    .light-button { background: transparent; }
+    .text-button { padding: 0; border: 0; border-radius: 2px; background: transparent; color: var(--cyan); }
+    .text-button:hover:not(:disabled) { background: transparent; color: #064e61; border: 0; }
+    .banner { border: 1px solid #dbc28b; background: #fff6df; border-radius: 6px; padding: 14px 18px; margin-bottom: 22px; color: #785819; display: flex; justify-content: space-between; gap: 20px; align-items: center; }
+    .banner.danger { color: #92232f; background: #fff0f1; border-color: #e3b9be; }
+    .overview-grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; align-items: start; }
+    .panel { border: 1px solid var(--line); border-radius: 8px; background: var(--card); overflow: hidden; }
+    .panel + .panel { margin-top: 22px; }
+    .panel-head { padding: 20px 22px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .panel-head p { margin-top: 5px; }
+    .panel-head button { flex-shrink: 0; white-space: nowrap; }
+    .panel-body { padding: 20px 22px; }
+    .feed { display: grid; gap: 16px; }
+    .alert-card { background: var(--card); border: 1px solid var(--line); border-left: 3px solid var(--yellow); border-radius: 6px; padding: 19px 22px; }
+    .alert-card.high { border-left-color: var(--red); }
+    .alert-card.medium { border-left-color: var(--orange); }
+    .alert-card.is-new { animation: arrive .4s ease-out; }
+    @keyframes arrive { from { opacity: 0; transform: translateY(-9px); } to { opacity: 1; transform: translateY(0); } }
+    @media (prefers-reduced-motion: reduce) { .alert-card.is-new { animation: none; } }
+    .alert-head { display: flex; justify-content: space-between; align-items: start; gap: 18px; }
+    .alert-class { color: var(--yellow); font-size: 19px; font-weight: 600; }
+    .high .alert-class { color: var(--red); }
+    .medium .alert-class { color: var(--orange); }
+    .alert-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 6px; color: var(--muted); font-size: 16px; }
+    .confidence { font-size: 22px; font-weight: 600; text-align: right; white-space: nowrap; }
+    .confidence .note { display: block; font-weight: 400; }
+    .evidence { margin: 16px 0 0; }
+    .alert-card > .note { margin-top: 14px; }
+    .evidence-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(80px, .65fr); gap: 16px; padding: 8px 0; border-top: 1px solid #e0e7ee; }
+    .evidence dt { color: var(--muted); font-family: Consolas, monospace; font-size: 16px; overflow-wrap: anywhere; }
+    .evidence dd { margin: 0; font-size: 17px; text-align: right; overflow-wrap: anywhere; white-space: pre-wrap; }
+    .alert-footer { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-top: 16px; }
+    .alert-footer .note { overflow-wrap: anywhere; }
+    .empty { text-align: center; padding: 42px 26px; color: var(--muted); border: 1px dashed #bbc9d5; border-radius: 6px; }
+    .empty h3 { color: #344a61; margin-bottom: 9px; }
+    .empty p { max-width: 620px; margin: 0 auto; }
+    .class-item + .class-item { margin-top: 19px; }
+    .class-item-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 7px; font-size: 17px; }
+    .class-item-head button { font-size: 17px; text-align: left; }
+    .track { height: 7px; background: #e7edf2; border-radius: 2px; overflow: hidden; }
+    .track span { display: block; height: 100%; width: 0; background: #227d95; }
+    .service-mini { display: flex; justify-content: space-between; gap: 15px; align-items: center; padding: 10px 0; font-size: 17px; }
+    .state-text { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 17px; white-space: nowrap; }
+    .state-text.good { color: var(--green); }
+    .state-text.bad { color: var(--red); }
+    .filter-bar { display: grid; grid-template-columns: minmax(250px, 1.6fr) minmax(170px, 1fr) minmax(185px, 1fr) auto; gap: 16px; align-items: end; padding: 20px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; }
+    label { display: block; font-size: 16px; color: #42536a; margin-bottom: 7px; }
+    input[type="search"], select { width: 100%; height: 47px; background: var(--bg); color: var(--text); padding: 9px 12px; font-size: 17px; }
+    input::placeholder { color: #6c7d8f; }
+    .feed-controls { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin: 18px 0; }
+    .checkbox-label { display: flex; gap: 9px; align-items: center; font-size: 17px; margin: 0; }
+    input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--cyan); }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th { padding: 15px 20px; font-size: 16px; color: var(--muted); font-weight: 500; background: #f0f4f7; border-bottom: 1px solid var(--line); }
+    td { padding: 18px 20px; border-bottom: 1px solid var(--line); vertical-align: middle; font-size: 18px; }
+    tr:last-child td { border-bottom: 0; }
+    td.numeric, th.numeric { text-align: right; }
+    td .note { margin-top: 4px; display: block; }
+    .class-table .track { width: 160px; margin-top: 7px; }
+    .class-table .text-button { text-align: left; font-size: 19px; }
+    .section-intro { margin-bottom: 20px; color: var(--muted); }
+    .loss-warning { color: var(--orange); }
+    .analytics-controls { display: flex; gap: 22px; align-items: end; margin-bottom: 20px; }
+    .analytics-controls > div { width: 250px; flex-shrink: 0; }
+    .analytics-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; align-items: start; }
+    .analytics-grid > .panel { margin: 0; }
+    .analytics-wide { grid-column: 1 / -1; }
+    .chart { width: 100%; display: block; height: auto; }
+    .chart text { fill: var(--muted); font-family: inherit; font-size: 22px; }
+    .chart .grid-line { stroke: var(--line); stroke-width: 1; }
+    .chart-legend { display: flex; flex-wrap: wrap; gap: 20px; margin: 12px 0 18px; }
+    .chart-legend span { display: inline-flex; align-items: center; gap: 8px; font-size: 16px; color: var(--muted); }
+    .swatch { display: inline-block; width: 13px; height: 13px; border-radius: 2px; }
+    .swatch.high { background: var(--red); } .swatch.medium { background: var(--orange); } .swatch.low { background: var(--yellow); }
+    .chart-bar-row { margin: 18px 0; }
+    .chart-bar-row:first-child { margin-top: 0; }
+    .chart-bar-row .track { height: 12px; margin-top: 8px; }
+    .chart-bar-row .high { background: var(--red); } .chart-bar-row .medium { background: var(--orange); } .chart-bar-row .low { background: var(--yellow); }
+    .chart-caption { color: var(--muted); font-size: 16px; margin: 16px 0 0; }
+    .chart-control { max-width: 400px; margin-bottom: 16px; }
+    .chart-details { margin-top: 12px; }
+    .chart-details td, .chart-details th { padding: 12px; font-size: 16px; }
+    .ingest-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; align-items: start; margin-bottom: 22px; }
+    .ingest-grid > .panel { margin: 0; }
+    .ingest-form > div { margin-bottom: 18px; }
+    input[type="file"] { width: 100%; padding: 12px; color: var(--text); background: var(--bg); font-size: 17px; }
+    input[type="file"]::file-selector-button { font: inherit; margin-right: 15px; color: var(--text); background: #e1eaf1; border: 1px solid var(--line); border-radius: 4px; padding: 7px; cursor: pointer; }
+    .input-message { margin-top: 16px; overflow-wrap: anywhere; }
+    .input-message.error { color: var(--red); }
+    .input-state { color: var(--yellow); font-size: 17px; }
+    .input-links { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; }
+    .input-links a { font-size: 16px; }
+    .system-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr); gap: 24px; align-items: start; }
+    .service-row { display: flex; justify-content: space-between; gap: 22px; align-items: center; padding: 17px 22px; border-bottom: 1px solid var(--line); }
+    .service-row:last-child { border-bottom: 0; }
+    .service-row .note { display: block; margin-top: 4px; }
+    .kv { margin: 0; }
+    .kv div { display: flex; justify-content: space-between; gap: 25px; padding: 11px 0; border-bottom: 1px solid var(--line); }
+    .kv div:last-child { border: 0; }
+    .kv dt { color: var(--muted); }
+    .kv dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
+    .endpoint { display: block; overflow-wrap: anywhere; background: var(--bg); border: 1px solid var(--line); padding: 13px; margin: 12px 0 18px; font-size: 17px; }
+    .footer-note { display: flex; justify-content: space-between; margin-top: 25px; gap: 18px; color: var(--muted); font-size: 16px; }
+    dialog { padding: 0; width: 720px; max-width: 85vw; max-height: 86vh; border: 1px solid #b9c8d5; border-radius: 8px; background: var(--card); color: var(--text); }
+    dialog::backdrop { background: rgb(0 0 0 / .65); }
+    .dialog-head { padding: 23px 26px; display: flex; justify-content: space-between; gap: 20px; align-items: center; border-bottom: 1px solid var(--line); }
+    .dialog-body { padding: 24px 26px; }
+    .dialog-body h3 { margin-top: 24px; margin-bottom: 12px; }
+    .dialog-body h3:first-child { margin-top: 0; }
+    .dialog-body .evidence { margin-top: 0; }
+    .dialog-body .evidence-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .dialog-body .kv dt { flex-shrink: 0; }
+    .dialog-body .kv dd { font-size: 17px; }
+    .dialog-actions { display: flex; justify-content: space-between; gap: 20px; margin-top: 22px; align-items: center; }
+    summary { cursor: pointer; color: #33465d; padding: 12px 0; }
+    pre { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--bg); padding: 18px; border: 1px solid var(--line); border-radius: 5px; }
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); border: 1px solid #b2cbd7; background: #eaf3f7; border-radius: 6px; padding: 13px 20px; font-size: 17px; z-index: 30; width: max-content; max-width: min(650px, calc(100% - 32px)); }
+    /* Reflow smaller desktop windows while retaining readable type. */
+    @media (max-width: 1250px) {
+      .workspace { padding: 24px; }
+      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .overview-grid, .system-grid, .analytics-grid, .ingest-grid { grid-template-columns: minmax(0, 1fr); }
+      .filter-bar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .topbar { align-items: start; }
+      .footer-note { flex-wrap: wrap; }
+    }
+    @media (max-width: 720px) {
+      .brand-row { padding: 14px 16px; flex-wrap: wrap; gap: 4px 16px; }
+      .brand-note { font-size: 16px; }
+      .navigation-row { width: calc(100% - 24px); }
+      .workspace { padding: 22px 16px 32px; }
+      .topbar { flex-wrap: wrap; gap: 12px; }
+      .clock { text-align: left; }
+      .metrics, .dataset-summary, .filter-bar { grid-template-columns: minmax(0, 1fr); }
+      .analytics-controls { flex-wrap: wrap; }
+      .analytics-controls > div { width: 100%; }
+      .panel-head, .feed-controls, .alert-footer, .dialog-actions { flex-wrap: wrap; }
+      .actions { flex-wrap: wrap; }
+      .kv div { flex-wrap: wrap; gap: 5px; }
+      .kv dd { width: 100%; text-align: left; }
+      .history-table { min-width: 660px; }
+      .report-metadata { overflow-wrap: anywhere; }
+    }
+    .report-title { width: 100%; margin: 6px 0 18px; padding: 10px 12px; min-height: 48px; background: var(--card); color: var(--text); }
+    .report-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 18px; margin: 18px 0; }
+    .report-selection { max-height: 380px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; }
+    .report-selection table { margin: 0; }
+    .report-selection input { width: 20px; height: 20px; accent-color: var(--cyan); }
+    .report-list-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 18px 0; border-bottom: 1px solid var(--line); }
+    .report-list-row:last-child { border: 0; }
+    .report-copy p { white-space: pre-wrap; margin: 10px 0 20px; overflow-wrap: anywhere; }
+    .report-copy h3 { margin: 26px 0 10px; }
+    .report-copy li { margin: 12px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .report-copy .actions { flex-wrap: wrap; }
+    .report-fact { padding: 20px 0; border-top: 1px solid var(--line); scroll-margin-top: 20px; }
+    .report-fact pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+    .report-metadata { margin: 18px 0; }
+    .report-metadata dd { overflow-wrap: anywhere; }
+    .investigation-controls { display: flex; gap: 16px; flex-wrap: wrap; align-items: end; margin-bottom: 18px; }
+    .investigation-controls > div { flex: 1 1 180px; }
+    .investigation-controls label { display: block; margin-bottom: 6px; color: var(--muted); font-size: 17px; }
+    .investigation-controls input, .investigation-controls select { width: 100%; min-height: 46px; padding: 8px 10px; color: var(--text); background: var(--card); }
+    .heatmap { min-width: 780px; width: 100%; border-collapse: separate; border-spacing: 4px; }
+    .heatmap th { font-size: 16px; padding: 4px; text-align: center; }
+    .heatmap th:first-child { text-align: left; min-width: 105px; }
+    .heatmap td { padding: 0; border: 0; }
+    .heatmap button { display: block; width: 100%; padding: 5px 1px; min-height: 36px; border: 0; border-radius: 3px; font-size: 16px; }
+    .heatmap .high { background: #b62a35; color: white; }
+    .heatmap .medium { background: #ab4f0b; color: white; }
+    .heatmap .low { background: #096a82; color: white; }
+    .heatmap .none { background: #e7edf2; color: #526174; }
+    .dataset-summary { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 18px; margin-bottom: 18px; }
+    .dataset-summary strong { display: block; font-size: 30px; margin-top: 8px; }
+    .history-table td { vertical-align: top; overflow-wrap: anywhere; }
+    .history-table .text-button { text-align: left; overflow-wrap: anywhere; }
+    .history-table .note { font-size: 16px; margin-top: 4px; }
+    .primary-button { background: var(--cyan); color: white; border-color: var(--cyan); }
+    .primary-button:hover:not(:disabled) { background: #07566b; color: white; }
+    .data-selector { display:flex; align-items:center; gap:12px; }
+    .data-selector label { color:#d1e4f4; margin:0; font-size:17px; }
+    .data-selector select { width:180px; background:#f5f9ff; color:#173853; border-color:#41627e; }
+    .overview-console-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:22px; align-items:stretch; }
+    .overview-console-grid > .panel { margin:0; min-width:0; }
+    .overview-wide { grid-column:span 2; }
+    .overview-console-grid .panel-head, .insight-grid .panel-head { border-top:3px solid #278bb4; }
+    .accent-violet .panel-head { border-top-color:#7953cc; }
+    .accent-teal .panel-head { border-top-color:#18866d; }
+    .accent-rose .panel-head { border-top-color:#d84260; }
+    .overview-health-panel { margin-top:22px; }
+    .overview-health-panel #overview-health { display:flex; flex-wrap:wrap; gap:24px; }
+    .overview-health-panel .service-mini { gap:14px; }
+    .health-footer { display:flex; flex-wrap:wrap; gap:20px; align-items:center; justify-content:space-between; }
+    .insight-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:22px; margin:22px 0; }
+    .insight-grid > .panel { margin:0; min-width:0; }
+    .portal-chart { display:block; width:100%; height:auto; }
+    .portal-chart text { font-family:inherit; font-size:16px; fill:var(--muted); }
+    .chart-scope { color:var(--muted); font-size:16px; margin-top:10px; }
+    .chart-empty { padding:40px 12px; text-align:center; color:var(--muted); }
+    .donut-layout { display:grid; grid-template-columns:minmax(130px,.9fr) minmax(0,1.1fr); align-items:center; gap:16px; }
+    .donut-chart { width:100%; height:auto; max-height:260px; }
+    .donut-total { font-family:inherit; font-size:38px; font-weight:650; fill:var(--text); }
+    .donut-caption { font-family:inherit; font-size:20px; fill:var(--muted); }
+    .legend-row { display:flex; align-items:center; gap:8px; width:100%; border:0; background:transparent; padding:7px 0; font-size:16px; text-align:left; }
+    .legend-row > span { flex:1; min-width:0; }
+    .legend-row strong { color:var(--text); font-size:17px; }
+    .legend-swatch { width:10px; height:10px; border-radius:3px; flex-shrink:0; }
+    .portal-bar { margin-bottom:16px; }
+    .portal-bar:last-child { margin-bottom:0; }
+    .portal-bar-label { display:flex; justify-content:space-between; align-items:center; gap:12px; font-size:17px; }
+    .portal-bar-label button { background:transparent; color:var(--text); border:0; padding:0; text-align:left; }
+    .portal-bar-track { height:10px; background:#edf2f8; border-radius:3px; overflow:hidden; margin-top:8px; }
+    .portal-bar-track span { display:block; height:100%; border-radius:3px; }
+    .compact-alert { display:flex; gap:12px; justify-content:space-between; padding:13px 0; border-bottom:1px solid var(--line); }
+    .compact-alert:last-child { border-bottom:0; }
+    .compact-alert button { padding:0; border:0; background:transparent; text-align:left; font-size:18px; font-weight:600; }
+    .compact-alert .note { display:block; margin-top:3px; overflow-wrap:anywhere; }
+    .confidence-tag { display:inline-block; padding:3px 8px; border-radius:4px; background:#eaf4fb; color:#176c98; font-size:16px; white-space:nowrap; }
+    .confidence-tag.high { background:#ffeaf0; color:#b32c4a; }
+    .confidence-tag.medium { background:#fff1d9; color:#99600f; }
+    .detection-table { min-width:850px; }
+    .detection-table td { font-size:17px; }
+    .detection-table .threat-name { font-weight:600; }
+    .overview-log-panel { margin-top:22px; }
+    .overview-log { min-width:1100px; }
+    .overview-log td { font-size:17px; vertical-align:middle; }
+    .overview-log tbody tr { cursor:pointer; }
+    .overview-log tbody tr:hover { background:#f2f7fc; }
+    .investigation-block { margin-top:22px; }
+    #selected-threat-panel { scroll-margin-top:260px; }
+    .overview-log time { white-space:nowrap; }
+    .overview-log .text-button { padding:0; white-space:nowrap; }
+    #history-volume { min-width:720px; }
+    .threat-tag { display:inline-block; padding:4px 9px; border:1px solid currentColor; border-radius:4px; font-size:16px; white-space:nowrap; }
+    .severity-tag { display:inline-block; padding:4px 9px; border-radius:4px; font-size:16px; font-weight:600; text-transform:uppercase; }
+    .severity-tag.high { color:#b32c4a; background:#ffeaf0; }
+    .severity-tag.medium { color:#99600f; background:#fff1d9; }
+    .severity-tag.low { color:#176c98; background:#eaf4fb; }
+    .specialized-metrics > .panel + .panel { margin:0; }
+    @media(max-width:1150px) {
+      .overview-console-grid, .insight-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .overview-wide { grid-column:1/-1; }
+    }
+    @media(max-width:720px) {
+      .overview-console-grid, .insight-grid { grid-template-columns:minmax(0,1fr); }
+      .data-selector { flex-wrap:wrap; }
+      .brand-row > .brand-note { display:none; }
+      .overview-wide { grid-column:auto; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to dashboard</a>
+  <header class="console-header">
+    <div class="brand-row">
+    <div class="brand"><svg viewBox="0 0 32 36" fill="none" aria-hidden="true"><path d="M16 2 29 7v10c0 8-6 13-13 17C9 30 3 25 3 17V7Z" stroke="currentColor" stroke-width="2"/><path d="M7 18h5l3-6 4 12 3-6h4" stroke="currentColor" stroke-width="2"/></svg>DRASHTA</div>
+    <p class="brand-note">Network security operations</p>
+    <div class="header-controls"><div class="data-selector"><label for="data-mode">Data</label><select id="data-mode"><option value="sample">Sample preview</option><option value="actual">Actual input</option></select></div><div class="network-rate" aria-label="Passive network rates" title="Flow records decoded and passive UDP payload throughput; not production-link bandwidth. Completed receipt-time window, up to 60 seconds."><span id="network-rate-status" class="network-rate-status" role="status">Checking network…</span><span><strong id="network-flow-rate">—</strong> flows/s</span><span><strong id="network-feed-mbps">—</strong> feed Mbps</span></div></div>
+    </div>
+    <div class="navigation-border"><div class="navigation-row">
+    <button id="nav-previous" class="nav-scroll" aria-label="Scroll navigation left" aria-controls="dashboard-navigation" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5-7 7 7 7"/></svg></button>
+    <nav id="dashboard-navigation" class="dashboard-nav" aria-label="Dashboard views">
+      <button class="nav-button" data-view="overview" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Overview</button>
+      <button class="nav-button" data-view="ingest"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-7 5-5 5 5M4 15v6h16v-6"/></svg>Inputs &amp; monitor</button>
+      <button class="nav-button" data-view="alerts"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>Live alerts</button>
+      <button class="nav-button" data-view="history"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v17H5Zm3 4h8m-8 4h8m-8 4h5"/></svg>Alert history</button>
+      <button class="nav-button" data-view="threats"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4v16h17M9 16V9m5 7V4m5 12v-5"/></svg>Threats</button>
+      <button class="nav-button" data-view="analytics"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18M6 16l4-5 4 3 6-8"/><circle cx="10" cy="11" r="1"/><circle cx="14" cy="14" r="1"/></svg>SOC analytics</button>
+      <button class="nav-button" data-view="system"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="7" rx="1"/><rect x="3" y="14" width="18" height="7" rx="1"/><path d="M7 6v1m0 10v1m5-11h5m-5 11h5"/></svg>System status</button>
+      <button class="nav-button" data-view="reports"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h10l4 4v14H5Zm10 0v5h4M8 12h8m-8 4h8"/></svg>Reports &amp; evidence</button>
+    </nav>
+    <button id="nav-next" class="nav-scroll" aria-label="Scroll navigation right" aria-controls="dashboard-navigation" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 5 7 7-7 7"/></svg></button>
+    </div></div>
+  </header>
+
+  <main id="main" class="workspace" tabindex="-1">
+    <header class="topbar">
+      <div><h1 id="page-title">Operations overview</h1></div>
+      <div class="clock"><time id="clock-time"></time><span id="clock-zone"></span></div>
+    </header>
+    <section id="overview-summary" class="metrics" aria-label="Alert summary">
+      <div class="metric"><span class="metric-label">Total alerts</span><strong id="stat-total" class="metric-value">—</strong></div>
+      <div class="metric"><span class="metric-label">High severity</span><strong id="stat-high" class="metric-value">—</strong></div>
+      <div class="metric"><span class="metric-label">Classes observed</span><strong id="stat-classes" class="metric-value">—</strong></div>
+      <div class="metric"><span class="metric-label">Input status</span><strong id="connection" class="metric-value connection waiting" aria-live="polite"><span class="dot"></span><span id="connection-label">No input</span></strong></div>
+    </section>
+
+    <div id="status-banner" class="banner" hidden role="status"><span id="banner-message"></span><button id="banner-system" class="text-button">System status</button></div>
+    <div id="recent-actions" class="page-actions"><span id="scope-note" class="note">Loading recent alerts…</span><div class="actions"><button id="refresh" class="light-button">Refresh data</button><button id="export" class="light-button" disabled>Export recent CSV</button></div></div>
+
+    <section id="view-overview" aria-label="Overview">
+      <div class="overview-console-grid">
+        <section class="panel overview-wide"><div class="panel-head"><h2>Detection activity</h2><span class="note">Recent 100 alerts</span></div><div class="panel-body" id="overview-activity"></div></section>
+        <section class="panel accent-violet"><div class="panel-head"><h2>Threat composition</h2><button id="overview-threats" class="text-button">Details →</button></div><div id="overview-classes" class="panel-body"></div></section>
+        <section class="panel accent-rose"><div class="panel-head"><h2>Confidence scores</h2></div><div id="overview-confidence" class="panel-body"></div></section>
+        <section class="panel accent-teal overview-wide"><div class="panel-head"><h2>IPs in recent alerts</h2></div><div class="panel-body"><div id="overview-ips"></div><p class="chart-scope">Alert associations · reported endpoints only</p></div></section>
+      </div>
+      <section class="panel overview-log-panel"><div class="panel-head"><div><h2>Recent threat alerts</h2><p id="overview-log-scope" class="note"></p></div><button id="view-all" class="text-button">View all →</button></div><div id="overview-feed" class="table-wrap"></div></section>
+      <section class="panel overview-health-panel"><div class="panel-head"><h2>Receiver health</h2><button id="open-system" class="text-button">System status →</button></div><div class="panel-body health-footer"><div id="overview-health"></div><p id="health-checked-mini" class="note"></p></div></section>
+    </section>
+
+    <section id="view-ingest" hidden aria-label="Inputs and monitor">
+
+      <div class="ingest-grid">
+        <section class="panel"><div class="panel-head"><h2>Upload read-only input</h2></div><div class="panel-body"><form id="ingest-form" class="ingest-form">
+          <div><label for="input-format">Input format</label><select id="input-format"><option value="pcap">Packet capture · PCAP / PCAPNG</option><option value="netflow">NetFlow v5 / v9 · binary export</option><option value="ipfix">IPFIX v10 · binary export</option><option value="sflow">sFlow v5 · binary export</option><option value="flow-json">Exported flow records · JSON</option><option value="flow-csv">Exported flow records · CSV</option><option value="metadata">Derived metadata · JSON</option><option value="detections">Replay labelled detections · JSON</option></select></div>
+          <div><label for="input-file">Choose input file</label><input id="input-file" type="file" required></div>
+          <button id="upload-input" type="submit">Process input</button><p id="input-message" class="input-message note" role="status"></p>
+        </form></div></section>
+        <section class="panel"><div class="panel-head"><h2>Live passive monitor</h2><span id="monitor-state" class="input-state">Checking…</span></div><div class="panel-body"><code id="monitor-endpoint" class="endpoint"></code><button id="monitor-toggle" disabled>Start passive monitor</button><dl id="monitor-counters" class="kv" style="margin-top: 16px;"></dl><p id="monitor-error" class="note" role="status"></p><p id="model-state" class="input-message"></p></div></section>
+      </div>
+      <section class="panel"><div class="panel-head"><h2 id="monitor-graph-title">Passive feed traffic</h2><span class="note">Last 60 seconds</span></div><div class="panel-body"><div id="monitor-graph"></div><p id="monitor-graph-note" class="note"></p></div></section>
+
+      <section class="panel"><div class="panel-head"><div><h2>Recent inputs</h2></div><button id="refresh-inputs" class="text-button">Check inputs</button></div><div id="inputs-empty" class="panel-body"></div><div id="inputs-table-wrap" hidden class="table-wrap"><table><thead><tr><th>Input</th><th>Flows / alerts</th><th>Processing state</th><th>Inspection</th></tr></thead><tbody id="inputs-rows"></tbody></table></div></section>
+
+    </section>
+    <section id="view-alerts" hidden aria-label="Live alerts">
+      <div class="insight-grid"><section class="panel accent-rose"><div class="panel-head"><h2>Confidence bands</h2></div><div class="panel-body" id="alerts-bands"></div></section><section class="panel accent-violet"><div class="panel-head"><h2>Threat classes</h2></div><div class="panel-body" id="alerts-classes"></div></section><section class="panel"><div class="panel-head"><h2>Score histogram</h2></div><div class="panel-body" id="alerts-histogram"></div></section></div>
+      <div class="filter-bar">
+        <div><label for="search">Search recent alerts</label><input id="search" type="search" placeholder="Class, evidence, model version…" autocomplete="off"></div>
+        <div><label for="class-filter">Threat class</label><select id="class-filter"><option value="all">All classes</option></select></div>
+        <div><label for="severity-filter">Confidence band</label><select id="severity-filter"><option value="all">All confidence levels</option><option value="high">High · ≥ 85%</option><option value="medium">Medium · 70–84.9%</option><option value="low">Low · below 70%</option></select></div>
+        <button id="reset-filters" class="light-button" disabled>Reset filters</button>
+      </div>
+      <div class="feed-controls"><div class="actions"><span id="feed-count" class="note"></span><label class="checkbox-label"><input id="hide-benign" type="checkbox">Hide BENIGN</label></div><button id="pause-feed" class="light-button">Pause feed</button></div>
+      <p id="pause-note" class="note" hidden style="margin-bottom: 18px;" role="status"></p>
+      <div class="panel table-wrap" id="alert-feed"></div>
+    </section>
+
+    <section id="view-threats" hidden aria-label="Threats">
+      <p id="threat-category-scope" class="note"></p>
+      <div id="threat-categories" class="threat-categories" aria-label="Six threat categories"></div>
+      <div class="insight-grid"><section class="panel accent-violet"><div class="panel-head"><h2>Category share</h2></div><div class="panel-body" id="threats-donut"></div></section><section class="panel"><div class="panel-head"><h2>Category volumes</h2></div><div class="panel-body" id="threats-bars"></div></section><section class="panel accent-teal"><div class="panel-head"><h2>Threat detection activity</h2></div><div class="panel-body" id="threats-activity"></div></section></div>
+      <section id="threat-specialized" class="panel" hidden><div class="panel-head"><h2 id="threat-specialized-title"></h2><button id="threat-specialized-close">Close analytics</button></div><div class="panel-body"><p id="threat-specialized-scope" class="note"></p><div id="threat-specialized-metrics" class="specialized-metrics"></div><h3>Detection evidence</h3><div id="threat-specialized-alerts" class="table-wrap"></div></div></section>
+    </section>
+
+    <section id="view-system" hidden aria-label="System status">
+      <div class="system-grid">
+        <div><section class="panel"><div class="panel-head"><div><h2>Service checks</h2><p id="health-checked" class="note">Waiting for first check</p></div><button id="check-health" class="light-button">Check services</button></div><div id="system-services"></div></section>
+          <section class="panel"><div class="panel-head"><h2>Delivery backlog</h2></div><div class="panel-body"><dl class="kv"><div><dt>Awaiting history write</dt><dd id="pending-pg">—</dd></div><div><dt>Awaiting cache write</dt><dd id="pending-redis">—</dd></div></dl><p id="backlog-note" class="note" style="margin-top: 16px;"></p></div></section>
+        </div>
+        <div>
+          <section class="panel"><div class="panel-head"><h2>Most recent detection</h2></div><div class="panel-body"><dl id="latest-record" class="kv"></dl></div></section>
+        </div>
+      </div>
+    </section>
+    <section id="view-analytics" hidden aria-label="SOC analytics">
+      <section id="selected-threat-panel" class="panel accent-violet" hidden><div class="panel-head"><h2 id="selected-threat-title" tabindex="-1">Threat investigation</h2><button id="close-threat-investigation">Close investigation</button></div><div class="panel-body" id="selected-threat-body"></div></section>
+      <section class="panel"><div class="panel-head"><h2>Detection coverage</h2></div><div class="panel-body"><div id="analytics-summary" class="dataset-summary"></div><details><summary>How to interpret these measures</summary><p class="note">Totals cover retained alerts across uploads and external sensors. High severity means confidence ≥ 85%; medium is 70–84.9%; low is below 70%. These bands reflect the detector score, not verified impact. BENIGN is included in totals and excluded from the threat heatmap. Input receipt and dashboard connectivity do not prove full network visibility.</p><p class="note">The charts below use the recent 100 detections. The heatmap uses retained alerts from the last seven UTC dates. Endpoint evidence comes from reported addresses or linked input observations; missing and ambiguous addresses stay unknown.</p></details></div></section>
+      <section class="panel"><div class="panel-head"><h2>Threat activity heatmap</h2><span class="note">7 days × 24 hours · UTC</span></div><div class="panel-body"><div id="threat-heatmap" class="table-wrap"></div><p id="heatmap-scope" class="note"></p><div class="chart-legend"><span><i class="swatch high"></i>Peak confidence ≥ 85%</span><span><i class="swatch medium"></i>70–84.9%</span><span><i class="swatch low"></i>Below 70%</span></div></div></section>
+      <div class="analytics-controls"><div><label for="analytics-class">Analyze threat class</label><select id="analytics-class"><option value="all">All classes</option></select></div><p id="analytics-scope" class="note"></p></div>
+      <div id="analytics-empty" hidden></div>
+      <div id="analytics-panels" class="analytics-grid">
+        <section class="panel analytics-wide"><div class="panel-head"><div><h2>Received-alert timeline</h2></div></div><div class="panel-body"><div class="chart-legend"><span><i class="swatch high"></i>High ≥ 85%</span><span><i class="swatch medium"></i>Medium ≥ 70%</span><span><i class="swatch low"></i>Low &lt; 70%</span></div><div id="analytics-timeline"></div><p id="timeline-caption" class="chart-caption"></p><details class="chart-details"><summary>View timeline counts</summary><div class="table-wrap"><table><thead><tr><th>Interval start (local)</th><th>High</th><th>Medium</th><th>Low</th><th>Total</th></tr></thead><tbody id="timeline-rows"></tbody></table></div></details></div></section>
+        <section class="panel"><div class="panel-head"><div><h2>Class comparison</h2></div></div><div id="analytics-classes" class="panel-body"></div></section>
+        <section class="panel"><div class="panel-head"><div><h2>Confidence distribution</h2></div></div><div id="analytics-confidence" class="panel-body"></div></section>
+        <section class="panel analytics-wide"><div class="panel-head"><div><h2>Evidence measurements</h2></div></div><div class="panel-body"><div class="chart-control"><label for="analytics-metric">Numeric evidence field</label><select id="analytics-metric"></select></div><div id="analytics-evidence"></div><p id="evidence-caption" class="chart-caption"></p><details class="chart-details"><summary>View measurement records</summary><div class="table-wrap"><table><thead><tr><th>Detected at</th><th>Class</th><th>Value</th><th>Details</th></tr></thead><tbody id="measurement-rows"></tbody></table></div></details></div></section>
+        <section class="panel analytics-wide accent-violet"><div class="panel-head"><h2>Evidence-value histogram</h2><span id="evidence-histogram-label" class="note"></span></div><div class="panel-body" id="analytics-histogram"></div></section>
+      </div>
+
+    </section>
+
+    <section id="view-history" hidden aria-label="Full alert history">
+      <form id="history-form" class="investigation-controls">
+        <div><label for="history-alert-id">Alert ID</label><input id="history-alert-id" maxlength="200" placeholder="Enter full alert ID"></div>
+        <div><label for="history-class">Threat class</label><select id="history-class"><option value="">All classes</option></select></div>
+        <div><label for="history-severity">Confidence band</label><select id="history-severity"><option value="">All bands</option><option value="high">High · ≥ 85%</option><option value="medium">Medium · 70–84.9%</option><option value="low">Low · below 70%</option></select></div>
+        <div><label for="history-origin">Source</label><select id="history-origin"><option value="">All sources</option><option value="live">Passive feed</option><option value="upload">Uploaded input</option><option value="external">Management alert</option><option value="unknown">Unknown / legacy</option></select></div>
+        <div><label for="history-since">From · local time</label><input id="history-since" type="datetime-local"></div><div><label for="history-until">Until · local time</label><input id="history-until" type="datetime-local"></div>
+        <button type="submit" class="primary-button" id="history-search">Search history</button><button type="button" id="history-reset">Clear filters</button>
+      </form>
+      <section class="panel"><div class="panel-head"><h2>Threat volumes</h2><span id="history-volume-scope" class="note"></span></div><div class="panel-body table-wrap"><div id="history-volume"></div></div></section>
+      <section class="panel"><div class="panel-head"><h2>Retained alerts</h2><button id="history-refresh" class="text-button">Refresh history</button></div><div class="panel-body"><p id="history-status" class="note" role="status"></p><div id="history-empty"></div></div><div id="history-table-wrap" class="table-wrap" hidden><table class="history-table"><thead><tr><th>Detected at / source</th><th>Class / confidence</th><th>Source → destination</th><th>Investigation</th></tr></thead><tbody id="history-rows"></tbody></table></div><div class="panel-body"><button id="history-more" hidden>Load older alerts</button></div></section>
+    </section>
+    <section id="view-reports" hidden aria-label="Reports and evidence">
+      <section class="panel"><div class="panel-head"><h2>New evidence report</h2><span id="report-generator" class="note" role="status">Checking Gemini…</span></div><div class="panel-body">
+        <form id="report-form"><label for="report-title">Report title</label><input id="report-title" class="report-title" maxlength="120" required value="Evidence report">
+          <div class="report-controls"><h3>Select alerts</h3><span id="report-selected" class="note">0 selected · maximum 30</span><button type="button" id="report-select-all" class="text-button">Select recent 30</button><button type="button" id="report-clear" class="text-button">Clear</button></div>
+          <div id="report-selection-empty"></div><div id="report-selection-wrap" class="report-selection" hidden><table><thead><tr><th>Select</th><th>Detected at</th><th>Class / confidence</th><th>Evidence</th></tr></thead><tbody id="report-selection-rows"></tbody></table></div>
+          <div class="report-controls"><button type="submit" id="report-generate" class="primary-button" disabled>Generate report</button><span id="report-provider-note" class="note">Selected alert evidence is sent to Google Gemini.</span></div><p id="report-message" class="note" role="status"></p>
+        </form>
+      </div></section>
+      <section class="panel"><div class="panel-head"><h2>Saved reports</h2><button id="report-refresh" class="text-button">Refresh reports</button></div><div id="report-list" class="panel-body"></div></section>
+      <section id="report-detail-panel" class="panel" hidden><div class="panel-head"><h2 id="report-detail-title"></h2><button id="report-detail-close" class="text-button">Close report</button></div><div id="report-detail" class="panel-body report-copy"></div></section>
+    </section>
+  </main>
+
+  <dialog id="alert-dialog" aria-labelledby="dialog-title"><div class="dialog-head"><div><h2 id="dialog-title" style="margin-top: 5px;"></h2></div><button id="close-dialog" class="light-button" aria-label="Close record details">Close</button></div><div id="dialog-content" class="dialog-body"></div></dialog>
+  <div id="toast" class="toast" hidden role="status"></div>
+
+  <script src="/assets/charts.js?v=1"></script>
+  <script src="/assets/preview.js?v=1"></script>
+  <script src="/assets/threats.js?v=1"></script>
+  <script>
+    'use strict';
+    const sampleMode = (() => { try { return localStorage.getItem('drashta-data-mode') !== 'actual'; } catch { return true; } })();
+    const THREATS = [
+      ['BENIGN', 'Benign traffic'], ['C2_BEACON', 'C2 beaconing'], ['TLS_C2', 'TLS C2'],
+      ['DNS_DGA', 'DNS DGA'], ['DNS_DNSCAT2', 'DNS tunneling (DNSCAT2)'],
+      ['EXFIL', 'Exfiltration'], ['SYN_FLOOD', 'SYN flood'],
+      ['UDP_REFLECT', 'UDP reflection'], ['PORT_SCAN', 'Port scan']
+    ];
+    const LABELS = Object.fromEntries(THREATS);
+    const VIEWS = {
+      overview: ['Security overview', 'A clear view of received alerts and receiver health.'],
+      ingest: ['Inputs & monitor', 'Read-only observations, passive collection, and model readiness.'],
+      alerts: ['Live alerts', 'Inspect recent detections, confidence, and supporting evidence.'],
+      history: ['Alert history'],
+      threats: ['Threats', 'Understand the class distribution across received alerts.'],
+      analytics: ['SOC analytics', 'Explore alert patterns and the measurements behind each detection.'],
+      system: ['System status', 'Check the receiver, storage, and outstanding deliveries.'],
+      reports: ['Reports & evidence']
+    };
+    const state = {
+      view: 'overview', records: new Map(), seen: new Set(), fresh: new Set(), stats: null,
+      health: null, healthAt: null, alertsLoaded: false, alertsError: false, statsError: false,
+      healthError: false, source: null, connected: false, everConnected: false,
+      paused: false, frozen: [], waiting: 0, search: '', classFilter: 'all', band: 'all',
+      hideBenign: false, selected: null, socket: null, disposed: false,
+      analyticsClass: 'all', analyticsMetric: '', analyticsSignature: null,
+      ingest: null, ingestError: false, ingestLoading: false
+    };
+    const $ = id => document.getElementById(id);
+    const number = value => new Intl.NumberFormat().format(value);
+    const dateFormat = new Intl.DateTimeFormat(undefined, { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+    const formatTime = value => dateFormat.format(new Date(value));
+    const band = confidence => confidence >= .85 ? 'high' : confidence >= .7 ? 'medium' : 'low';
+    const percent = confidence => (confidence * 100).toFixed(1) + '%';
+    const formatValue = value => value === null ? 'null' : typeof value === 'object' ? JSON.stringify(value) : String(value);
+    let reconnectTimer, statsTimer, toastTimer, searchTimer;
+    let alertsRequest = 0, statsRequest = 0, healthRequest = 0;
+
+    function el(tag, className, text) {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text !== undefined) node.textContent = String(text);
+      return node;
+    }
+    function button(text, handler, className = 'text-button') {
+      const node = el('button', className, text); node.type = 'button';
+      node.addEventListener('click', handler); return node;
+    }
+    function empty(title, description) {
+      const node = el('div', 'empty'); node.append(el('h3', '', title)); return node;
+    }
+    function kvRow(key, value) {
+      const node = el('div'); node.append(el('dt', '', key), el('dd', '', value)); return node;
+    }
+    function records() {
+      return [...state.records.values()].sort((a, b) => {
+        const milliseconds = Date.parse(b.timestamp) - Date.parse(a.timestamp);
+        if (milliseconds) return milliseconds;
+        // Backend UTC timestamps retain microseconds; Date.parse truncates them.
+        const remainder = timestamp => Number((timestamp.match(/\.(\d+)/)?.[1] || '').slice(0, 6).padEnd(6, '0')) % 1000;
+        return remainder(b.timestamp) - remainder(a.timestamp);
+      });
+    }
+    function viewRecords() { return state.paused ? state.frozen : records(); }
+    function validRecord(record) {
+      return record && typeof record.id === 'string' && Object.hasOwn(LABELS, record.threat_class)
+        && Number.isFinite(record.confidence) && Number.isFinite(Date.parse(record.timestamp));
+    }
+    function mergeRecords(incoming, live = false) {
+      for (const record of incoming) {
+        if (!validRecord(record)) continue;
+        const isNew = !state.seen.has(record.id);
+        state.records.set(record.id, record);
+        state.seen.add(record.id);
+        if (isNew && live) {
+          state.fresh.add(record.id);
+          if (state.paused) state.waiting++;
+        }
+      }
+      state.records = new Map(records().slice(0, 100).map(record => [record.id, record]));
+      for (const id of state.fresh) if (!state.records.has(id)) state.fresh.delete(id);
+      while (state.seen.size > 2000) state.seen.delete(state.seen.values().next().value);
+    }
+    function evidenceRows(evidence, limit = Infinity) {
+      const node = el('dl', 'evidence');
+      for (const [key, value] of Object.entries(evidence || {}).slice(0, limit)) {
+        const row = el('div', 'evidence-row');
+        row.append(el('dt', '', key), el('dd', '', formatValue(value))); node.append(row);
+      }
+      return node;
+    }
+    function alertCard(record) {
+      const node = el('article', 'alert-card ' + band(record.confidence) + (state.fresh.has(record.id) ? ' is-new' : ''));
+      node.dataset.renderedAt = String(Date.now());
+      const head = el('div', 'alert-head'), identity = el('div');
+      identity.append(el('h3', 'alert-class', LABELS[record.threat_class]));
+      const meta = el('div', 'alert-meta'), time = el('time', '', formatTime(record.timestamp));
+      time.dateTime = record.timestamp; meta.append(el('code', '', record.threat_class), time); identity.append(meta);
+      if (record.flow_id) { const flow = el('p', 'note', record.flow_id); flow.style.overflowWrap = 'anywhere'; identity.append(flow); }
+      const confidence = el('div', 'confidence', percent(record.confidence)); confidence.append(el('span', 'note', 'confidence'));
+      head.append(identity, confidence); node.append(head);
+      const fields = Object.keys(record.evidence || {}).length;
+      if (fields) node.append(evidenceRows(record.evidence, 4));
+      else node.append(el('p', 'note', 'No evidence features supplied.'));
+      const footer = el('div', 'alert-footer');
+      footer.append(el('span', 'note', fields > 4 ? 'Showing 4 of ' + fields + ' evidence fields' : fields + ' evidence ' + (fields === 1 ? 'field' : 'fields')),
+        button('View details →', () => openDetails(record.id)));
+      node.append(footer); return node;
+    }
+    function currentFilters() { return state.search || state.classFilter !== 'all' || state.band !== 'all' || state.hideBenign; }
+    function renderFeed(container, list, title, description) {
+      if (!list.length) {
+        const message = title + '\n' + description;
+        if (container.dataset.emptyMessage !== message) container.replaceChildren(empty(title, description));
+        container.dataset.emptyMessage = message;
+        return;
+      }
+      delete container.dataset.emptyMessage;
+      const existing = new Map([...container.children].filter(node => node.dataset.recordId).map(node => [node.dataset.recordId, node]));
+      const wanted = new Set(list.map(record => record.id));
+      for (const node of [...container.children]) if (!wanted.has(node.dataset.recordId)) node.remove();
+      list.forEach((record, index) => {
+        const node = existing.get(record.id) || alertCard(record);
+        node.dataset.recordId = record.id;
+        // Preserve existing cards, keyboard focus, and arrival animations when
+        // stats/health refresh. Only new or reordered cards move in the DOM.
+        if (container.children[index] !== node) container.insertBefore(node, container.children[index] || null);
+      });
+    }
+    function filteredRecords() {
+      const query = state.search.trim().toLocaleLowerCase();
+      return viewRecords().filter(record => {
+        if (state.hideBenign && record.threat_class === 'BENIGN') return false;
+        if (state.classFilter !== 'all' && record.threat_class !== state.classFilter) return false;
+        if (state.band !== 'all' && band(record.confidence) !== state.band) return false;
+        return !query || (LABELS[record.threat_class] + ' ' + JSON.stringify(record)).toLocaleLowerCase().includes(query);
+      });
+    }
+    function updateNavigation() {
+      const nav = $('dashboard-navigation');
+      const overflow = nav.scrollWidth > nav.parentElement.clientWidth + 1;
+      $('nav-previous').hidden = $('nav-next').hidden = !overflow;
+      $('nav-previous').disabled = nav.scrollLeft <= 1;
+      $('nav-next').disabled = nav.scrollLeft >= nav.scrollWidth - nav.clientWidth - 1;
+    }
+    function scrollNavigation(direction) {
+      $('dashboard-navigation').scrollBy({left: direction * $('dashboard-navigation').clientWidth * .65,
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth'});
+    }
+    function setView(view, focus = false) {
+      if (!VIEWS[view]) view = 'overview';
+      state.view = view;
+      for (const key of Object.keys(VIEWS)) $('view-' + key).hidden = key !== view;
+      document.querySelectorAll('[data-view]').forEach(node => {
+        if (node.dataset.view === view) node.setAttribute('aria-current', 'page');
+        else node.removeAttribute('aria-current');
+      });
+      $('page-title').textContent = VIEWS[view][0];
+      document.title = 'Drashta | ' + VIEWS[view][0];
+      if (location.hash !== '#' + view) history.replaceState(null, '', '#' + view);
+      render();
+      if (view === 'ingest') loadIngest();
+      if (view === 'reports') loadReports();
+      if (view === 'history' && !investigationState.historyLoaded) loadHistory();
+      if (view === 'analytics') loadHeatmap();
+      if (focus) { $('main').focus({ preventScroll: true }); window.scrollTo(0, 0); }
+      updateNavigation();
+      document.querySelector('.nav-button[aria-current="page"]')?.scrollIntoView({block:'nearest',inline:'nearest'});
+    }
+    function inspectClass(cls) {
+      state.classFilter = cls; state.search = ''; state.band = 'all'; state.hideBenign = false;
+      $('class-filter').value = cls; $('search').value = ''; $('severity-filter').value = 'all'; $('hide-benign').checked = false;
+      setView('alerts', true);
+    }
+    function status(value, goodText = 'Ready', badText = 'Unavailable') {
+      const node = el('span', 'state-text' + (value === true ? ' good' : value === false ? ' bad' : ''));
+      node.append(el('span', 'dot' + (value === true ? ' good' : value === false ? ' bad' : '')),
+        el('span', '', value === true ? goodText : value === false ? badText : 'Not checked'));
+      return node;
+    }
+    function healthData() { return state.healthError ? null : state.health; }
+    function renderSummary() {
+      $('overview-summary').hidden = state.view !== 'overview';
+      $('recent-actions').hidden = !['overview','alerts','threats'].includes(state.view);
+      const hasObservations = !!(state.stats?.total || state.ingest?.inputs.length || state.ingest?.monitor.processed);
+      $('stat-total').textContent = hasObservations && state.stats ? number(state.stats.total) : '—';
+      $('stat-high').textContent = hasObservations && state.stats ? number(state.stats.high_severity) : '—';
+      $('stat-classes').textContent = hasObservations && state.stats ? number(state.stats.distinct_classes) : '—';
+      const inputReady = hasObservations && !state.ingestError;
+      $('connection').className = 'metric-value connection ' + (inputReady ? 'good' : 'waiting');
+      $('connection').querySelector('.dot').className = 'dot' + (inputReady ? ' good' : '');
+      $('connection-label').textContent = sampleMode ? 'Sample preview' : state.ingestError ? 'Unavailable' : hasObservations ? 'Input received' : state.ingest?.monitor.active ? 'Listening' : 'No input';
+      const count = state.records.size;
+      $('scope-note').textContent = state.alertsError ? 'Alerts unavailable' : count ? number(count) + ' recent alerts' : 'No alerts yet';
+      $('export').disabled = (state.view === 'alerts' ? filteredRecords() : records()).length === 0;
+      $('export').textContent = state.view === 'alerts' ? 'Export filtered CSV' : 'Export recent CSV';
+      let message = '', danger = false;
+      const health = healthData();
+      if (health && !health.journal) { message = 'The receiver cannot confirm durable journal storage. Check the service status before continuing.'; danger = true; }
+      else if (health && !health.postgres) message = 'Alert history is unavailable. Accepted alerts are saved in the receiver journal and will be replayed.';
+      else if (health && !health.redis) message = 'The recent cache is unavailable. Accepted alerts are saved; cache recovery will retry automatically.';
+      else if (state.everConnected && !state.connected) message = 'Live updates are interrupted. Reconnecting automatically every 2 seconds; previously loaded alerts remain visible.';
+      else if (state.alertsError || state.statsError) message = 'Some dashboard data could not be refreshed. Previously loaded results remain visible; use Refresh data to retry.';
+      else if (state.healthError) message = 'Service checks could not reach the receiver. Previously loaded alerts remain visible.';
+      $('status-banner').hidden = !message; $('banner-message').textContent = message;
+      $('status-banner').className = 'banner' + (danger ? ' danger' : '');
+    }
+    function renderOverview() {
+      const data = records();
+      DrashtaCharts.activity($('overview-activity'),data,'Recent detection activity');
+      DrashtaCharts.donut($('overview-classes'),classItems(null,state.stats?.by_class),'Retained alert composition',inspectClass);
+      DrashtaCharts.histogram($('overview-confidence'),data.map(row=>row.confidence*100),'Recent confidence score histogram',{domain:[0,100],color:'#d84260',suffix:'%'});
+      const ips = new Map();
+      for (const record of data) for (const ip of new Set([record.src_ip,record.dst_ip].filter(Boolean))) ips.set(ip,(ips.get(ip)||0)+1);
+      DrashtaCharts.bars($('overview-ips'),[...ips].map(([ip,count])=>({key:ip,label:ip,count,color:'#18866d'})).sort((a,b)=>b.count-a.count).slice(0,5),'IPs associated with recent alerts',openIPReport);
+      renderOverviewLog(data);
+      const health = healthData(), services = $('overview-health'); services.replaceChildren();
+      for (const [name, key] of [['Alert history', 'postgres'], ['Recent cache', 'redis'], ['Recovery journal', 'journal']]) {
+        const row = el('div', 'service-mini'); row.append(el('span', '', name), status(health?.[key])); services.append(row);
+      }
+      $('health-checked-mini').textContent = state.healthAt ? 'Last check: ' + formatTime(state.healthAt) : 'Waiting for service checks';
+    }
+    function renderOverviewLog(data) {
+      const threats=data.filter(record=>record.threat_class!=='BENIGN'),latest=threats.slice(0,20),container=$('overview-feed');
+      $('overview-log-scope').textContent=latest.length ? 'Latest '+latest.length+' of '+threats.length+' threats in recent '+data.length+' alerts' : '';
+      if(!latest.length){container.replaceChildren(empty(state.alertsError?'Alerts unavailable':'No threat alerts yet'));return;}
+      const table=el('table','overview-log'),head=el('thead'),titles=el('tr');
+      for(const label of ['Time','Severity','Threat type','Source IP','Destination IP','Confidence','Title / flow','Evidence']){const cell=el('th','',label);cell.scope='col';titles.append(cell);}
+      head.append(titles);table.append(head);const body=el('tbody');
+      for(const record of latest){
+        const row=el('tr'),timeCell=el('td'),time=el('time','',formatTime(record.timestamp));time.dateTime=record.timestamp;timeCell.append(time);
+        const severity=record.severity || band(record.confidence),level=el('td'),type=el('td'),source=el('td'),destination=el('td'),details=el('td');
+        level.append(el('span','severity-tag '+(['high','medium','low'].includes(severity)?severity:''),severity));
+        const tag=button(LABELS[record.threat_class] || record.threat_class,()=>openThreatAnalysis(record),'threat-tag');tag.setAttribute('aria-label','Analyze '+(LABELS[record.threat_class] || record.threat_class)+' alert '+record.id);tag.style.color=DrashtaCharts.palette[record.threat_class] || '#52647b';type.append(tag);
+        row.tabIndex=0;row.setAttribute('aria-label','Investigate alert '+record.id);row.title='Open this threat in SOC analytics';
+        row.addEventListener('click',event=>{if(!event.target.closest('button,a,input,select'))openThreatAnalysis(record);});
+        row.addEventListener('keydown',event=>{if(event.target===row&&(event.key==='Enter'||event.key===' ')){event.preventDefault();openThreatAnalysis(record);}});
+        for(const [cell,ip] of [[source,record.src_ip],[destination,record.dst_ip]])cell.append(ip?button(ip,()=>openIPReport(ip)):el('span','note','Not supplied'));
+        const suppliedTitle=record.title || record.evidence?.title;
+        const title=typeof suppliedTitle==='string'&&suppliedTitle.trim()?suppliedTitle:(record.flow_id || 'Not supplied');
+        details.append(button('Inspect',()=>openDetails(record.id)));
+        row.append(timeCell,level,type,source,destination,el('td','',percent(record.confidence)),el('td','',title),details);body.append(row);
+      }
+      table.append(body);container.replaceChildren(table);
+    }
+    function classItems(data, totals=null) {
+      return THREATS.map(([key,label])=>({key,label,count:totals ? totals[key] || 0 : (data || []).filter(record=>record.threat_class===key).length}));
+    }
+    function renderDetectionTable(container,data) {
+      if (!data.length) { container.replaceChildren(empty(currentFilters() ? 'No alerts match these filters' : 'No detections yet')); return; }
+      const table=el('table','detection-table'),head=el('thead'),titles=el('tr');
+      for(const label of ['Detected at','Threat class','Confidence','Source → destination','Flow ID','Evidence']) titles.append(el('th','',label));
+      head.append(titles);table.append(head);const body=el('tbody');
+      for(const record of data){
+        const row=el('tr'),cls=el('td','threat-name',LABELS[record.threat_class]),score=el('td'),addresses=el('td'),details=el('td');cls.style.color=DrashtaCharts.palette[record.threat_class];
+        score.append(el('span','confidence-tag '+band(record.confidence),percent(record.confidence)));
+        addresses.append(el('div','',record.src_ip || 'Not supplied'),el('div','note','→ '+(record.dst_ip || 'Not supplied')));
+        details.append(button('Inspect',()=>openDetails(record.id)));
+        row.append(el('td','',formatTime(record.timestamp)),cls,score,addresses,el('td','',record.flow_id || 'Not supplied'),details);body.append(row);
+      }table.append(body);container.replaceChildren(table);
+    }
+    function renderAlerts() {
+      const filtered = filteredRecords();
+      DrashtaCharts.donut($('alerts-bands'),['high','medium','low'].map(key=>({key,label:key[0].toUpperCase()+key.slice(1),count:filtered.filter(row=>band(row.confidence)===key).length})),'Displayed confidence bands',level=>{state.band=level;$('severity-filter').value=level;render();});
+      DrashtaCharts.bars($('alerts-classes'),classItems(filtered),'Displayed threat classes',inspectClass);
+      DrashtaCharts.histogram($('alerts-histogram'),filtered.map(row=>row.confidence*100),'Displayed confidence scores',{domain:[0,100],color:'#7953cc',suffix:'%'});
+      $('feed-count').textContent = viewRecords().length ? number(filtered.length) + ' / ' + number(viewRecords().length) + ' alerts' : '';
+      $('reset-filters').disabled = !currentFilters();
+      $('pause-feed').textContent = state.paused ? 'Resume feed' + (state.waiting ? ' (' + number(state.waiting) + ')' : '') : 'Pause feed';
+      $('pause-note').hidden = !state.paused;
+      $('pause-note').textContent = 'Paused · ' + number(state.waiting) + ' new alerts';
+      renderDetectionTable($('alert-feed'),filtered);
+    }
+    let selectedThreatCategory=null;
+    function openThreatCategory(id) {
+      selectedThreatCategory=id; setView('threats',true);
+      $('threat-specialized').scrollIntoView({block:'start'});
+      $('threat-specialized-title').focus({preventScroll:true});
+    }
+    function renderThreats() {
+      const categories=DrashtaThreats.categories, byClass=state.stats?.by_class||{};
+      const items=categories.map(category=>({...category,key:category.id,count:category.classes.reduce((sum,cls)=>sum+(byClass[cls]||0),0)}));
+      const total=items.reduce((sum,item)=>sum+item.count,0), benign=byClass.BENIGN||0;
+      $('threat-category-scope').textContent=state.stats ? number(total)+' retained threat detections · '+number(benign)+' BENIGN alerts excluded' : 'Retained category totals unavailable';
+      $('threat-categories').replaceChildren(...items.map(item=>{
+        const card=button('',()=>openThreatCategory(item.id),'threat-category');
+        card.style.setProperty('--category-color',item.color);card.setAttribute('aria-pressed',String(selectedThreatCategory===item.id));
+        card.append(el('span','',item.label),el('strong','',state.stats?number(item.count)+' detections':'—'),el('span','note','Open analytics →'));return card;
+      }));
+      DrashtaCharts.donut($('threats-donut'),items,'Retained threat categories',openThreatCategory);
+      DrashtaCharts.bars($('threats-bars'),items,'Retained category volumes',openThreatCategory);
+      DrashtaCharts.activity($('threats-activity'),records().filter(row=>row.threat_class!=='BENIGN'),'Recent non-BENIGN detection activity');
+      const category=categories.find(item=>item.id===selectedThreatCategory);
+      $('threat-specialized').hidden=!category;if(!category)return;
+      const data=records().filter(row=>category.classes.includes(row.threat_class));
+      $('threat-specialized-title').textContent=category.label+' analytics';
+      $('threat-specialized-title').tabIndex=-1;
+      $('threat-specialized-scope').textContent=data.length+' detections in recent '+records().length+' alerts · '+category.classes.join(' / ');
+      $('threat-specialized-metrics').replaceChildren(...category.metrics.map(definition=>{
+        const panel=el('section','panel'),head=el('div','panel-head'),body=el('div','panel-body');head.append(el('h3','',definition.label));
+        const values=DrashtaThreats.values(data,definition);
+        if(!values.length)body.append(el('p','note','Not supplied'));
+        else if(definition.kind==='number'){
+          const numbers=values.map(item=>item.value),mean=numbers.reduce((sum,n)=>sum+n/numbers.length,0);
+          body.append(el('strong','evidence-average',number(mean)+(definition.unit?' '+definition.unit:'')),el('p','note','Mean · '+values.length+' of '+data.length+' records'));
+          const chart=el('div');body.append(chart);requestAnimationFrame(()=>{if(chart.isConnected)DrashtaCharts.histogram(chart,numbers,definition.label+' distribution',{color:category.color});});
+        }else if(definition.kind==='distribution'){
+          const counts=new Map();for(const item of values)for(const [key,count] of Object.entries(item.value))counts.set(key,(counts.get(key)||0)+count);
+          const chart=el('div');body.append(chart);DrashtaCharts.bars(chart,[...counts].sort((a,b)=>b[1]-a[1]).slice(0,20).map(([label,count])=>({label,count,color:category.color})),definition.label);
+          if(counts.size>20)body.append(el('p','note','Top 20 of '+counts.size+' reported keys'));
+          body.append(el('p','note',values.length+' supplied distributions'));
+        }else{
+          body.append(el('p','note',values.length+' supplied values'));
+          if(definition.kind==='sequence'){
+            const chart=el('div');body.append(chart);const first=values[0];
+            requestAnimationFrame(()=>{if(chart.isConnected)DrashtaCharts.sequence(chart,first.value,definition.label+(definition.unit?' · '+definition.unit:''),category.color);});
+            body.append(el('p','note','Sequence from '+first.row.id+(definition.unit?' · '+definition.unit:'')));
+          }
+          for(const item of values.slice(0,5)){
+            const row=el('div','metadata-item');row.append(button(item.row.id,()=>openDetails(item.row)),el('code','metadata-value',Array.isArray(item.value)?item.value.join(', '):item.value));body.append(row);
+          }
+          if(values.length>5)body.append(el('p','note','Showing 5 of '+values.length+' values · inspect alerts for full evidence'));
+        }
+        panel.append(head,body);return panel;
+      }));
+      renderDetectionTable($('threat-specialized-alerts'),data);
+    }
+    function analyticsRecords() {
+      return records().filter(record => state.analyticsClass === 'all' || record.threat_class === state.analyticsClass);
+    }
+    function svgNode(tag, attrs = {}, text) {
+      const node = document.createElementNS('http://www.w3.org/2000/svg', tag);
+      for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, String(value));
+      if (text !== undefined) node.textContent = String(text);
+      return node;
+    }
+    function chartSVG(label) {
+      const node = svgNode('svg', { viewBox: '0 0 700 260', role: 'img', 'aria-label': label, class: 'chart' });
+      node.append(svgNode('title', {}, label)); return node;
+    }
+    function timelineBuckets(data) {
+      const times = data.map(record => Date.parse(record.timestamp));
+      const first = Math.min(...times), last = Math.max(...times);
+      // Include the last timestamp in the final half-open interval. A single
+      // timestamp receives a short surrounding range instead of a zero axis.
+      const start = first === last ? first - 6000 : first;
+      const width = first === last ? 1000 : Math.max(1, Math.ceil((last - first + 1) / 12));
+      const buckets = Array.from({ length: 12 }, (_, index) => ({ start: start + index * width, high: 0, medium: 0, low: 0 }));
+      for (const record of data) buckets[Math.min(11, Math.max(0, Math.floor((Date.parse(record.timestamp) - start) / width)))][band(record.confidence)]++;
+      return { buckets, width, first, last };
+    }
+    function renderTimeline(data) {
+      const { buckets, width, first, last } = timelineBuckets(data);
+      const total = item => item.high + item.medium + item.low;
+      const peak = Math.max(1, ...buckets.map(total));
+      const svg = chartSVG('Received alerts by detection time, stacked by confidence. Exact counts are in the timeline table.');
+      for (const tick of [...new Set([0, Math.ceil(peak / 2), peak])]) {
+        const y = 210 - tick / peak * 170;
+        svg.append(svgNode('line', { x1: 50, x2: 685, y1: y, y2: y, class: 'grid-line' }),
+          svgNode('text', { x: 40, y: y + 6, 'text-anchor': 'end' }, number(tick)));
+      }
+      buckets.forEach((item, index) => {
+        let y = 210;
+        const group = svgNode('g', { 'data-bucket-total': total(item) });
+        group.append(svgNode('title', {}, formatTime(item.start) + ' · ' + total(item) + ' alerts'));
+        for (const level of ['low', 'medium', 'high']) {
+          const height = item[level] / peak * 170; y -= height;
+          group.append(svgNode('rect', { x: 57 + index * 52, y, width: 34, height, fill: 'var(--' + (level === 'high' ? 'red' : level === 'medium' ? 'orange' : 'yellow') + ')' }));
+        }
+        svg.append(group);
+      });
+      const shortTime = value => new Date(value).toLocaleTimeString(undefined, { hour12: false });
+      svg.append(svgNode('text', { x: 50, y: 248 }, shortTime(buckets[0].start)),
+        svgNode('text', { x: 685, y: 248, 'text-anchor': 'end' }, shortTime(buckets[11].start + width)));
+      $('analytics-timeline').replaceChildren(svg);
+      $('timeline-caption').textContent = formatTime(first) + ' → ' + formatTime(last) + ' · ' + (width / 1000).toLocaleString(undefined, { maximumFractionDigits: 3 }) + ' s intervals';
+      $('timeline-rows').replaceChildren(...buckets.map(item => {
+        const row = el('tr'); row.append(...[formatTime(item.start) + '.' + String(new Date(item.start).getMilliseconds()).padStart(3, '0'), item.high, item.medium, item.low, total(item)].map(value => el('td', '', value))); return row;
+      }));
+    }
+    function chartBar(label, count, total, fraction, level, handler) {
+      const row = el('div', 'chart-bar-row'), head = el('div', 'class-item-head');
+      head.append(button(label, handler), el('span', '', number(count) + ' · ' + (total ? percent(count / total) : '0.0%')));
+      const track = el('div', 'track'), bar = el('span', level); bar.style.width = (fraction * 100) + '%';
+      track.setAttribute('aria-hidden', 'true'); track.append(bar); row.append(head, track); return row;
+    }
+    function inspectBand(level) {
+      state.classFilter = state.analyticsClass; state.band = level; state.search = ''; state.hideBenign = false;
+      $('class-filter').value = state.classFilter; $('severity-filter').value = level; $('search').value = ''; $('hide-benign').checked = false;
+      setView('alerts', true);
+    }
+    function renderEvidence(data) {
+      const keys = [...new Set(data.flatMap(record => Object.entries(record.evidence || {}).filter(([, value]) => typeof value === 'number' && Number.isFinite(value)).map(([key]) => key)))].sort();
+      if (!keys.includes(state.analyticsMetric)) state.analyticsMetric = keys.includes('packet_count') ? 'packet_count' : keys[0] || '';
+      const select = $('analytics-metric');
+      // Retain the native control when its options have not changed.
+      if (JSON.stringify([...select.options].map(option => option.value)) !== JSON.stringify(keys.length ? keys : [''])) {
+        select.replaceChildren(...(keys.length ? keys : ['']).map(key => { const option = el('option', '', key || 'No numeric evidence supplied'); option.value = key; return option; }));
+      }
+      select.value = state.analyticsMetric; select.disabled = !keys.length;
+      const key = state.analyticsMetric;
+      const reported = data.filter(record => Object.hasOwn(record.evidence || {}, key) && typeof record.evidence[key] === 'number' && Number.isFinite(record.evidence[key]));
+      $('evidence-histogram-label').textContent=key || 'No numeric field';
+      DrashtaCharts.histogram($('analytics-histogram'),reported.map(record=>record.evidence[key]),'Distribution of '+key,{color:'#7953cc'});
+      const sample = reported.slice(0, 30).reverse();
+      $('measurement-rows').replaceChildren();
+      if (!sample.length) {
+        $('analytics-evidence').replaceChildren(empty('No numeric measurements', 'This sample has no numeric evidence fields. Missing measurements are not treated as zero.'));
+        $('evidence-caption').textContent = ''; return;
+      }
+      const values = sample.map(record => record.evidence[key]);
+      const minimum = Math.min(0, ...values), maximum = Math.max(0, ...values);
+      const scale = Math.max(Math.abs(minimum), Math.abs(maximum)) || 1;
+      const bottom = minimum / scale, top = maximum / scale;
+      const range = top - bottom || 1;
+      const position = value => 210 - ((value / scale - bottom) / range) * 170;
+      const svg = chartSVG(key + ' by detection order. Points open alert details; exact values are in the measurement table.');
+      svg.setAttribute('role', 'group');
+      // Use normalized coordinates to avoid overflow for finite extreme values.
+      for (const value of [...new Set([minimum, maximum])]) {
+        const y = position(value);
+        svg.append(svgNode('line', { x1: 150, x2: 685, y1: y, y2: y, class: 'grid-line' }),
+          svgNode('text', { x: 140, y: y + 6, 'text-anchor': 'end' }, value.toLocaleString(undefined, { maximumSignificantDigits: 4, notation: Math.abs(value) >= 1e6 || (Math.abs(value) > 0 && Math.abs(value) < .001) ? 'scientific' : 'standard' })));
+      }
+      sample.forEach((record, index) => {
+        const x = sample.length === 1 ? 410 : 162 + index / (sample.length - 1) * 510;
+        const y = position(record.evidence[key]);
+        const point = svgNode('circle', { cx: x, cy: y, r: 7, fill: 'var(--cyan)', stroke: 'var(--bg)', 'stroke-width': 2, tabindex: 0, role: 'button', 'aria-label': key + ': ' + record.evidence[key] + ', ' + record.threat_class + ', ' + formatTime(record.timestamp), 'data-measurement-id': record.id });
+        point.append(svgNode('title', {}, record.evidence[key] + ' · ' + formatTime(record.timestamp)));
+        point.addEventListener('click', () => openDetails(record.id));
+        point.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openDetails(record.id); } });
+        svg.append(svgNode('line', { x1: x, x2: x, y1: position(0), y2: y, stroke: '#a6bfcb', 'stroke-width': 2 }), point);
+        const row = el('tr'), details = el('td'); details.append(button('View', () => openDetails(record.id)));
+        row.append(el('td', '', formatTime(record.timestamp)), el('td', '', record.threat_class), el('td', '', String(record.evidence[key])), details); $('measurement-rows').append(row);
+      });
+      svg.append(svgNode('text', { x: 150, y: 248 }, 'Oldest plotted detection'), svgNode('text', { x: 685, y: 248, 'text-anchor': 'end' }, 'Newest'));
+      $('analytics-evidence').replaceChildren(svg);
+      $('evidence-caption').textContent = sample.length + ' of ' + reported.length + ' measurements · ' + (data.length - reported.length) + ' unavailable';
+    }
+    let selectedThreatRecord=null,selectedThreatRendered=null;
+    function openThreatAnalysis(record) {
+      selectedThreatRecord=record;selectedThreatRendered=null;
+      state.analyticsClass=record.threat_class;$('analytics-class').value=record.threat_class;state.analyticsSignature=null;
+      setView('analytics',true);$('selected-threat-panel').scrollIntoView({block:'start'});$('selected-threat-title').focus({preventScroll:true});
+    }
+    function renderSelectedThreat() {
+      const record=selectedThreatRecord,panel=$('selected-threat-panel');panel.hidden=!record;
+      if(!record||selectedThreatRendered===record)return;selectedThreatRendered=record;
+      $('selected-threat-title').textContent=(LABELS[record.threat_class] || record.threat_class)+' · '+record.id;
+      const body=$('selected-threat-body');body.replaceChildren();renderAlertDossier(body,record);
+      const actions=el('div','dialog-actions');actions.append(button('Original alert',()=>openDetails(record.id)),button('Threat history',()=>showHistory({threat_class:record.threat_class})));
+      if(record.src_ip)actions.append(button('Source IP report',()=>openIPReport(record.src_ip)));
+      body.append(actions);
+    }
+    function renderAlertDossier(body,record) {
+      const evidence=record.evidence || {},severity=record.severity || band(record.confidence);
+      const head=el('div','panel-head');head.append(el('h3','','ALERT #'+record.id),el('span','severity-tag '+severity,String(severity).toUpperCase()));body.append(head,el('h3','',LABELS[record.threat_class] || record.threat_class));
+      const protocol=evidence.protocol===6?'TCP':evidence.protocol===17?'UDP':typeof evidence.protocol==='string'?evidence.protocol:'Not supplied';
+      const facts=el('dl','kv');
+      for(const [key,value] of [['Timestamp',record.timestamp],['Flow ID',record.flow_id || 'Not supplied'],['Source',record.src_ip || 'Not supplied'],['Destination',record.dst_ip || 'Not supplied'],['Protocol',protocol],['Confidence',percent(record.confidence)]])facts.append(kvRow(key,value));body.append(facts);
+      body.append(el('h3','investigation-block','WHY FLAGGED?'));
+      if(sampleMode)body.append(el('p','note','Illustrative sample evidence'));
+      const reasons=[];for(const key of ['reason','explanation','decision_reason','rationale','reasons']){const value=evidence[key];if(typeof value==='string'&&value.trim())reasons.push(value);else if(Array.isArray(value))reasons.push(...value.filter(item=>typeof item==='string'&&item.trim()));}
+      if(reasons.length){const list=el('ul');for(const reason of [...new Set(reasons)])list.append(el('li','',reason));body.append(list);}else body.append(el('p','note','Detector explanation not supplied. A decision threshold cannot be reconstructed from confidence alone.'));
+      const category=DrashtaThreats.categories.find(item=>item.classes.includes(record.threat_class));
+      if(category){const wrap=el('div','table-wrap'),table=el('table'),thead=el('thead'),headers=el('tr'),tbody=el('tbody');for(const title of ['Evidence feature','Measured value','Detector assessment'])headers.append(el('th','',title));thead.append(headers);
+        for(const definition of category.metrics){const values=DrashtaThreats.values([record],definition),row=el('tr');const assessment=values.map(item=>evidence.feature_assessments?.[item.key]).filter(item=>typeof item==='string'||item&&typeof item==='object').map(item=>typeof item==='string'?item:[item.level,item.reason].filter(value=>typeof value==='string').join(' · ')).filter(Boolean).join(' · ');
+          row.append(el('td','',definition.label),el('td','',values.length?values.map(item=>(typeof item.value==='object'?JSON.stringify(item.value):(typeof item.value==='number'?new Intl.NumberFormat(undefined,{maximumSignificantDigits:6}).format(item.value):String(item.value)))+(definition.unit?' '+definition.unit:'')).join(' · '):'Not supplied'),el('td','',assessment || 'Not supplied'));tbody.append(row);
+        }table.append(thead,tbody);wrap.append(table);body.append(wrap);
+      }
+      body.append(el('h3','investigation-block','MODEL'));const model=el('dl','kv');model.append(kvRow('Anomaly score',typeof evidence.anomaly_score==='number'&&Number.isFinite(evidence.anomaly_score)?String(evidence.anomaly_score):'Not supplied'),kvRow('Classifier',record.threat_class),kvRow('Model version',record.model_version || 'Not supplied'));body.append(model,el('h4','','Evidence contributing to decision'));
+      const contributions=Array.isArray(evidence.contributions)?evidence.contributions.filter(item=>typeof item==='string'&&item.trim()):[];
+      if(contributions.length){const list=el('ul');for(const item of contributions)list.append(el('li','',item));body.append(list);}else body.append(el('p','note','Model contributions not supplied.'));
+      body.append(el('h3','investigation-block','FLOW TIMELINE'));const timeline=Array.isArray(evidence.flow_timeline)?evidence.flow_timeline.filter(item=>item&&typeof item.timestamp==='string'&&Number.isFinite(Date.parse(item.timestamp))&&typeof item.event==='string'):[];
+      if(timeline.length){const list=el('ol');for(const item of [...timeline].sort((a,b)=>Date.parse(a.timestamp)-Date.parse(b.timestamp)))list.append(el('li','',item.timestamp+' — '+item.event));body.append(list);}else body.append(el('p','note','Flow timeline not supplied. Alert recorded at '+record.timestamp+'.'));
+      for(const [title,data] of [['Supporting evidence',evidence],['Observation visibility',record.visibility],['Provenance',{input_id:record.input_id,origin:record.origin,endpoint_source:record.endpoint_source}]]){const detail=el('details','investigation-block');detail.append(el('summary','',title),data?evidenceRows(data):el('p','note','Not supplied'));body.append(detail);}
+      const raw=el('details','investigation-block');raw.append(el('summary','','Exact alert record'),el('pre','',JSON.stringify(record,null,2)));body.append(raw);return raw;
+    }
+
+    function renderAnalytics() {
+      renderSelectedThreat();
+      $('analytics-summary').replaceChildren(...[['Retained alerts',state.stats?.total],['Confidence ≥ 85%',state.stats?.high_severity],['Classes observed',state.stats?.distinct_classes]].map(([label,value]) => {
+        const node = el('div'); node.append(el('span','note',label),el('strong','',state.stats?.total ? number(value) : '—')); return node;
+      }));
+      const data = analyticsRecords();
+      const signature = JSON.stringify([data.map(record => record.id), state.analyticsClass, state.analyticsMetric, state.alertsLoaded, state.alertsError]);
+      if (signature === state.analyticsSignature) return;
+      $('analytics-scope').textContent = data.length ? data.length + ' / ' + state.records.size + ' recent alerts' : '';
+      $('analytics-empty').hidden = !!data.length; $('analytics-panels').hidden = !data.length;
+      if (!data.length) {
+        $('analytics-empty').replaceChildren(empty(state.alertsError ? 'Recent alerts unavailable' : state.alertsLoaded ? 'No alerts in this selection' : 'Loading received alerts', 'Graphs appear when the external sensor supplies alerts. Select All classes to view the available sample.'));
+      } else {
+        renderTimeline(data);
+        const counts = THREATS.map(([cls, label]) => [cls, label, data.filter(record => record.threat_class === cls).length]).filter(item => item[2] > 0).sort((a, b) => b[2] - a[2]);
+        const maximum = Math.max(1, ...counts.map(item => item[2]));
+        $('analytics-classes').replaceChildren(...counts.map(([cls, label, count]) => chartBar(label, count, data.length, count / maximum, '', () => inspectClass(cls))));
+        const bands = [['high', 'High · ≥ 85%'], ['medium', 'Medium · 70–84.9%'], ['low', 'Low · below 70%']];
+        $('analytics-confidence').replaceChildren(...bands.map(([level, label]) => {
+          const count = data.filter(record => band(record.confidence) === level).length;
+          return chartBar(label, count, data.length, count / data.length, level, () => inspectBand(level));
+        }));
+        renderEvidence(data);
+      }
+      state.analyticsSignature = JSON.stringify([data.map(record => record.id), state.analyticsClass, state.analyticsMetric, state.alertsLoaded, state.alertsError]);
+    }
+    function renderSystem() {
+      const health = healthData(), services = $('system-services'); services.replaceChildren();
+      const checks = [
+        ['Alert history', 'Postgres · permanent alert storage', health?.postgres],
+        ['Recent cache', 'Redis · rolling 500-alert window', health?.redis],
+        ['Recovery journal', 'Durable acceptance and destination retries', health?.journal],
+        [sampleMode ? 'Sample preview' : 'Live stream', 'WebSocket · browser connection to this receiver', sampleMode ? null : state.connected]
+      ];
+      for (const [name, description, value] of checks) {
+        const row = el('div', 'service-row'), identity = el('div'); identity.append(el('span', '', name));
+        row.append(identity, sampleMode && name==='Sample preview' ? el('span','state-text','Browser-only') : status(value, name === 'Live stream' ? 'Connected' : 'Ready', name === 'Live stream' ? 'Reconnecting' : 'Unavailable')); services.append(row);
+      }
+      $('health-checked').textContent = state.healthError ? 'Check failed · receiver could not be reached' : state.healthAt ? 'Last checked: ' + formatTime(state.healthAt) + ' · checks every 30 seconds' : 'Waiting for first check';
+      $('pending-pg').textContent = health && health.pending_postgres !== null ? number(health.pending_postgres) : '—';
+      $('pending-redis').textContent = health && health.pending_redis !== null ? number(health.pending_redis) : '—';
+      $('backlog-note').textContent = !health ? 'Unavailable' : !health.journal ? 'Journal unavailable' : health.pending_postgres || health.pending_redis ? 'Retrying pending writes' : '';
+      const recent = records()[0], latest = $('latest-record'); latest.replaceChildren();
+      if (recent) latest.append(kvRow('Detected at', formatTime(recent.timestamp)), kvRow('Class', recent.threat_class), kvRow('Model version', recent.model_version || 'Not supplied'), kvRow('Visibility', recent.visibility ? 'Reported' : 'Not supplied'));
+      else latest.append(kvRow('Alert record', 'None received yet'));
+    }
+    const INPUT_STATES = { sample_preview:'Sample observations',awaiting_model: 'Awaiting model', awaiting_template_or_data: 'Awaiting template / data', model_error: 'Model adapter error', model_inferred: 'Model output received', replayed_detections: 'External detections replayed' };
+    async function loadIngest() {
+      if (state.ingestLoading || state.disposed) return;
+      state.ingestLoading = true;
+      try { state.ingest = await fetchJSON('/api/ingest'); state.ingestError = false; }
+      catch { state.ingestError = true; }
+      finally { state.ingestLoading = false; }
+      renderSummary();
+      renderNetworkRate();
+      if (state.view === 'ingest') renderIngest();
+    }
+    function renderNetworkRate() {
+      const monitor=state.ingest?.monitor, label=$('network-rate-status');
+      const age=monitor?.last_received_at ? Date.now()-Date.parse(monitor.last_received_at):Infinity;
+      const receiving=monitor?.active&&monitor.bound&&age>=0&&age<10000;
+      label.className='network-rate-status'+(sampleMode?' preview':receiving?' receiving':'');
+      label.textContent=sampleMode?'Sample network':state.ingestError?'Network status unavailable':!monitor?'Checking network…':!monitor.bound?'Receiver unavailable':!monitor.active?'Monitor paused':receiving?'Receiving passive feed':'Waiting for passive feed';
+      const show=sampleMode||(!state.ingestError&&monitor?.active&&monitor.bound);
+      $('network-flow-rate').textContent=show&&Number.isFinite(monitor?.flow_records_per_second)?number(monitor.flow_records_per_second):'—';
+      $('network-feed-mbps').textContent=show&&Number.isFinite(monitor?.feed_mbps)?Number(monitor.feed_mbps).toFixed(3):'—';
+    }
+    function renderIngest() {
+      renderMonitorGraph();
+      const data = state.ingest, monitor = data?.monitor;
+      $('monitor-state').textContent = sampleMode ? 'Sample preview' : state.ingestError ? 'Check failed' : monitor?.active ? 'Listening' : monitor?.bound ? 'Paused' : 'Unavailable';
+      $('monitor-toggle').disabled = state.ingestError || !monitor?.bound;
+      $('monitor-toggle').textContent = monitor?.active ? 'Pause passive monitor' : 'Start passive monitor';
+      $('monitor-endpoint').textContent = sampleMode ? 'Illustrative passive feed · no live connection' : monitor ? (monitor.published_host || '127.0.0.1') + ':' + (monitor.published_port || monitor.port) + ' · UDP only' : 'Waiting for receiver status';
+      $('model-state').textContent = data?.model.available ? 'Model ready' : data?.model.state === 'adapter_error' ? 'Model unavailable' : 'Awaiting model';
+      $('monitor-error').textContent = state.ingestError ? 'The receiver could not be reached. Input status may be stale.' : monitor?.last_error || '';
+      const counters = $('monitor-counters'); counters.replaceChildren();
+      if (monitor?.received) for (const [label, value] of [
+        ['Received datagrams', monitor.received], ['Processed datagrams', monitor.processed], ['Rejected', monitor.rejected],
+        ['Queue drops', monitor.queue_dropped], ['Ignored while paused', monitor.ignored_while_paused], ['Queued', monitor.queued],
+        ['Last observation', monitor.last_received_at ? formatTime(monitor.last_received_at) : 'No datagrams received']
+      ]) counters.append(kvRow(label, typeof value === 'number' ? number(value) : value));
+      else counters.append(kvRow('Last observation', '—'));
+      const inputs = data?.inputs || []; $('inputs-table-wrap').hidden = !inputs.length; $('inputs-empty').hidden = !!inputs.length;
+      $('inputs-empty').textContent = state.ingestError ? 'Inputs unavailable' : 'No inputs yet';
+      const rows = $('inputs-rows'); rows.replaceChildren();
+      for (const input of inputs) {
+        const row = el('tr'), name = el('td'), counts = el('td'), status = el('td'), actions = el('td');
+        name.append(el('strong', '', input.format.toUpperCase()), el('span', 'note', formatTime(input.created_at)), el('code', 'note', number(input.bytes) + ' bytes'));
+        counts.append(el('div', '', number(input.flow_count) + ' flows'), el('span', 'note', number(input.alert_count) + ' alerts'));
+        status.append(el('span', 'input-state', INPUT_STATES[input.state] || input.state), el('span', 'note', sampleMode ? 'Fictional observations' : input.processing_ms + ' ms extraction'));
+        actions.append(button('Inspect features', () => inspectInput(input)));
+        const links = el('div', 'input-links');
+        for (const [label, suffix] of [['Feature JSON', '/features?download=true'], ['Original bytes', '/original']]) {
+          const link = el('a', '', label); link.href = '/api/ingest/' + encodeURIComponent(input.id) + suffix; links.append(link);
+        }
+        actions.append(links); row.append(name, counts, status, actions); rows.append(row);
+      }
+    }
+    async function inspectInput(input) {
+      try {
+        const data = await fetchJSON('/api/ingest/' + encodeURIComponent(input.id) + '/features');
+        state.selected = null; $('dialog-title').textContent = 'Input observations';
+        const body = $('dialog-content'); body.replaceChildren(); const summary = el('dl', 'kv');
+        summary.append(kvRow('Format', input.format.toUpperCase()), kvRow('Input ID', input.id), kvRow('SHA-256', input.sha256),
+          kvRow('State', INPUT_STATES[input.state] || input.state), kvRow('Feature schema', data.feature_version), kvRow('Observed flows', data.records.length)); body.append(summary);
+        if (data.records.length > 20) body.append(el('p', 'note', 'Showing 20 of ' + number(data.records.length) + ' flows'));
+        for (const record of data.records.slice(0, 20)) {
+          body.append(el('h3', '', record.flow_id), el('p', 'note', formatTime(record.timestamp)),
+            el('p', 'note', record.src_ip ? record.src_ip + ':' + record.src_port + ' → ' + record.dst_ip + ':' + record.dst_port + ' · protocol ' + record.protocol : '—'), evidenceRows(record.features));
+        }
+        $('alert-dialog').showModal();
+      } catch { notify('Input features could not be loaded. Use Check inputs to retry.'); }
+    }
+    async function uploadInput(event) {
+      event.preventDefault(); const file = $('input-file').files[0];
+      if (sampleMode) { notify('Switch Data to Actual input to upload observations.'); return; }
+      if (!file) return;
+      if (!file.size || file.size > 10 * 1024 * 1024) { $('input-message').textContent = 'Choose a nonempty file of at most 10 MiB.'; $('input-message').className = 'input-message error'; return; }
+      const data = new FormData(); data.append('file', file); data.append('format', $('input-format').value);
+      $('upload-input').disabled = true; $('input-message').className = 'input-message note'; $('input-message').textContent = 'Processing…';
+      try {
+        const response = await fetch('/api/ingest/upload', { method: 'POST', body: data });
+        const result = await response.json();
+        if (!response.ok) throw new Error(typeof result.detail === 'string' ? result.detail : 'Input could not be accepted. Check its format and fields.');
+        $('input-message').textContent = number(result.flow_count) + ' flows retained. ' + (INPUT_STATES[result.state] || result.state) + '. ' + number(result.alert_count) + ' labelled alerts.';
+        await loadIngest(); loadStats();
+      } catch (error) { $('input-message').className = 'input-message error'; $('input-message').textContent = error.message || 'Upload failed. Check inputs before retrying.'; }
+      finally { $('upload-input').disabled = false; }
+    }
+    async function toggleMonitor() {
+      if (sampleMode) return;
+      $('monitor-toggle').disabled = true;
+      try {
+        const response = await fetch('/api/monitor', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ active: !state.ingest?.monitor.active }) });
+        if (!response.ok) throw new Error();
+        await loadIngest();
+      } catch { notify('Monitor state could not be changed. Check inputs to confirm the current state.'); await loadIngest(); }
+    }
+    function render() {
+      renderSummary();
+      if (state.view === 'overview') renderOverview();
+      if (state.view === 'alerts') renderAlerts();
+      if (state.view === 'threats') renderThreats();
+      if (state.view === 'analytics') renderAnalytics();
+      if (state.view === 'ingest') renderIngest();
+      if (state.view === 'system') renderSystem();
+      if (state.view === 'history') renderHistory();
+      if (state.view === 'reports') renderReports();
+      if (!state.paused) state.fresh.clear();
+    }
+    async function openDetails(id) {
+      let record = state.records.get(id) || state.frozen.find(record => record.id === id) || investigationState.historyRecords.get(id);
+      if (!record) {
+        try { record = await fetchJSON('/api/history/' + encodeURIComponent(id)); }
+        catch { notify('Alert history could not be loaded.'); return; }
+      }
+      if (!record) { notify('This record has moved outside the recent window.'); return; }
+      state.selected = record;
+      $('dialog-title').textContent = LABELS[record.threat_class] + ' · ' + percent(record.confidence);
+      const body = $('dialog-content'); body.replaceChildren();
+      const raw = renderAlertDossier(body,record);
+      const actions = el('div', 'dialog-actions'); actions.append(el('span', 'note', 'Read-only sensor evidence'), button('Copy record JSON', async () => {
+        try { await navigator.clipboard.writeText(JSON.stringify(record, null, 2)); notify('Record JSON copied.'); }
+        catch { raw.open = true; notify('Clipboard unavailable. Select and copy the original record JSON.'); }
+      }, 'light-button'));
+      body.append(actions); $('alert-dialog').showModal();
+    }
+    function notify(message) {
+      clearTimeout(toastTimer); $('toast').textContent = message; $('toast').hidden = false;
+      toastTimer = setTimeout(() => { $('toast').hidden = true; }, 4000);
+    }
+    const investigationState = { historyRecords:new Map(), historyLoaded:false, historyLoading:false, historyError:false,
+      historyPage:null, historyIP:null, filters:{}, heatmap:null, heatmapLoading:false, heatmapError:false,
+      };
+    const ORIGINS = {live:'Passive feed', upload:'Uploaded input', external:'Management alert', unknown:'Unknown / legacy'};
+    function historyFilters() {
+      const filters = {exclude_benign:'true'};
+      if (investigationState.historyIP) filters.ip = investigationState.historyIP;
+      for (const [key,id] of [['alert_id','history-alert-id'],['threat_class','history-class'],['severity','history-severity'],['origin','history-origin']]) {
+        const value = $(id).value.trim(); if (value) filters[key] = value;
+      }
+      for (const key of ['since','until']) if ($('history-'+key).value) filters[key] = new Date($('history-'+key).value).toISOString();
+      return filters;
+    }
+    async function loadHistory(older=false) {
+      if (investigationState.historyLoading || state.disposed) return;
+      investigationState.historyLoading = true; $('history-search').disabled = true; $('history-more').disabled = true;
+      if (!older) { investigationState.historyRecords.clear(); investigationState.filters = historyFilters(); }
+      renderHistory();
+      try {
+        const params = new URLSearchParams({...investigationState.filters,limit:'50'});
+        if (older && investigationState.historyPage?.next_cursor) params.set('cursor',investigationState.historyPage.next_cursor);
+        const page = await fetchJSON('/api/history?'+params);
+        for (const record of page.alerts) investigationState.historyRecords.set(record.id,record);
+        investigationState.historyPage = page; investigationState.historyLoaded = true; investigationState.historyError = false;
+      } catch (error) { investigationState.historyError = error.message || 'History unavailable'; }
+      finally { investigationState.historyLoading = false; $('history-search').disabled = false; $('history-more').disabled = false; renderHistory(); }
+    }
+    function renderHistory() {
+      const page = investigationState.historyPage, data = [...investigationState.historyRecords.values()].filter(record=>record.threat_class!=='BENIGN');
+      DrashtaCharts.volumes($('history-volume'),DrashtaThreats.categories.map(category=>({label:category.label,color:category.color,count:data.filter(record=>category.classes.includes(record.threat_class)).length})),'Historical threat volumes by category');
+      $('history-volume-scope').textContent=data.length ? data.length+' displayed threats · '+number(page?.total || data.length)+' matching in history' : '';
+      $('history-status').textContent = investigationState.historyError || (investigationState.historyLoading ? 'Loading history…' : page ?
+        data.length+' of '+number(page.total)+' matching alerts'+(investigationState.filters.ip ? ' · IP '+investigationState.filters.ip : '')+' · '+(sampleMode ? 'Sample preview' : page.source==='journal' ? 'Journal fallback; database-only history may be unavailable' : 'Retained history') : '');
+      $('history-table-wrap').hidden = !data.length; $('history-empty').hidden = !!data.length;
+      $('history-empty').replaceChildren(empty(investigationState.historyLoading ? 'Loading history' : investigationState.historyError ? 'History unavailable' : 'No matching alerts'));
+      $('history-more').hidden = !page?.next_cursor || !!investigationState.historyError;
+      $('history-rows').replaceChildren(...data.map(record => {
+        const row = el('tr'), date = el('td'), cls = el('td'), endpoints = el('td'), actions = el('td');
+        date.append(el('div','',formatTime(record.timestamp)),el('div','note',ORIGINS[record.origin] || ORIGINS.unknown),el('div','note',record.id));
+        cls.append(el('strong','',record.threat_class),el('div','note',percent(record.confidence)+' · '+record.severity));
+        for (const [label,key] of [['From','src_ip'],['To','dst_ip']]) {
+          const line = el('div'); line.append(el('span','note',label+' '),record[key] ? button(record[key],()=>openIPReport(record[key])) : el('span','note','Not supplied')); endpoints.append(line);
+        }
+        actions.append(button('Alert details',()=>openDetails(record.id)));
+        row.append(date,cls,endpoints,actions); return row;
+      }));
+    }
+    function localTimeInput(value) { const date = new Date(value); return new Date(date.getTime()-date.getTimezoneOffset()*60000).toISOString().slice(0,16); }
+    function showHistory(filters={}) {
+      investigationState.historyIP = filters.ip || null;
+      for (const [key,id] of [['alert_id','history-alert-id'],['threat_class','history-class'],['severity','history-severity'],['origin','history-origin']]) $(id).value = filters[key] || '';
+      for (const key of ['since','until']) $('history-'+key).value = filters[key] ? localTimeInput(filters[key]) : '';
+      setView('history',true); loadHistory();
+    }
+    async function openIPReport(address) {
+      try {
+        const report = await fetchJSON('/api/investigations/ip?address='+encodeURIComponent(address));
+        if ($('alert-dialog').open) $('alert-dialog').close();
+        $('dialog-title').textContent = 'IP evidence · '+report.ip;
+        const body = $('dialog-content'); body.replaceChildren();
+        const facts = el('dl','kv'); facts.append(kvRow('Retained alerts',number(report.total_alerts)),kvRow('First detection',report.first_detection ? formatTime(report.first_detection) : '—'),
+          kvRow('Latest detection',report.last_detection ? formatTime(report.last_detection) : '—'),kvRow('High / medium / low', ['high','medium','low'].map(key=>report.confidence_bands[key]||0).join(' / ')));
+        body.append(facts,el('h3','','Threat classes'));
+        const classes = el('dl','kv'); for (const [cls,count] of Object.entries(report.by_class)) classes.append(kvRow(cls,count));
+        body.append(classes,el('h3','','Reported peers'));
+        const peers = el('dl','kv'); for (const peer of report.peers) peers.append(kvRow(peer.ip,peer.alerts+' alerts'));
+        body.append(peers,el('p','note',report.peers.length+' of '+report.peers_total+' peers · '+report.missing_peer+' alerts missing peer IP'),el('p','note',report.scope));
+        if (report.source==='journal') body.append(el('p','note','Journal fallback; database-only history may be unavailable.'));
+        const actions = el('div','dialog-actions'); actions.append(button('View full IP history',()=>{ $('alert-dialog').close(); showHistory({ip:report.ip}); }));
+        const download = el('a','','Download IP report'); download.href='/api/investigations/ip?address='+encodeURIComponent(report.ip)+'&download=true'; download.setAttribute('download',''); actions.append(download);
+        body.append(actions); $('alert-dialog').showModal();
+      } catch { notify('IP evidence could not be loaded.'); }
+    }
+    async function loadHeatmap() {
+      if (investigationState.heatmapLoading || state.disposed) return;
+      investigationState.heatmapLoading = true;
+      try { investigationState.heatmap = await fetchJSON('/api/analytics/heatmap'); investigationState.heatmapError = false; }
+      catch { investigationState.heatmapError = true; }
+      finally { investigationState.heatmapLoading = false; renderHeatmap(); }
+    }
+    function renderHeatmap() {
+      const data = investigationState.heatmap;
+      $('heatmap-scope').textContent = data?.total ? data.total+' non-BENIGN alerts · cell colour uses highest detector confidence · select an hour for history'+(data.source==='journal' ? ' · journal fallback' : '') : '';
+      if (investigationState.heatmapError || !data?.total) { $('threat-heatmap').replaceChildren(empty(investigationState.heatmapError ? 'Heatmap unavailable' : 'No labelled threats in this window')); return; }
+      const table = el('table','heatmap'), head = el('thead'), titles = el('tr'); titles.append(el('th','','UTC date / hour'));
+      for (let hour=0;hour<24;hour++) { const cell=el('th','',String(hour).padStart(2,'0')); cell.scope='col'; titles.append(cell); }
+      head.append(titles); table.append(head); const body=el('tbody');
+      for (const day of data.days) {
+        const row = el('tr'), label=el('th','',day.date.slice(5)); label.scope='row'; row.append(label);
+        day.hours.forEach((cell,hour)=> {
+          const td=el('td'), level=cell.count ? band(cell.peak_confidence) : 'none';
+          const start=new Date(day.date+'T'+String(hour).padStart(2,'0')+':00:00Z');
+          const node=button(cell.count || '—',()=>showHistory({since:start.toISOString(),until:new Date(start.getTime()+3600000).toISOString(),exclude_benign:true}),level);
+          node.setAttribute('aria-label',day.date+' '+hour+':00 UTC · '+cell.count+' non-BENIGN alerts'+(cell.count ? ' · peak confidence '+percent(cell.peak_confidence) : ''));
+          node.title=node.getAttribute('aria-label'); td.append(node); row.append(td);
+        }); body.append(row);
+      }
+      table.append(body); $('threat-heatmap').replaceChildren(table);
+    }
+    function renderMonitorGraph() {
+      $('monitor-graph-title').textContent=sampleMode?'Live traffic · simulation':'Passive feed traffic · datagrams/s';
+      const series=state.ingest?.monitor.receipt_series || [];
+      if (!series.length) { $('monitor-graph').replaceChildren(empty('No datagrams received')); $('monitor-graph-note').textContent=''; return; }
+      const maximum=Math.max(1,...series.map(point=>point.datagrams)), svg=chartSVG('Received datagrams per second over the last 60 seconds.');
+      const coords=series.map((point,index)=>[80+index/Math.max(1,series.length-1)*590,210-point.datagrams/maximum*160]);
+      for (const value of [0,maximum]) { const y=210-value/maximum*160; svg.append(svgNode('line',{x1:80,x2:670,y1:y,y2:y,class:'grid-line'}),svgNode('text',{x:65,y:y+6,'text-anchor':'end'},String(value))); }
+      svg.append(svgNode('polyline',{points:coords.map(pair=>pair.join(',')).join(' '),fill:'none',stroke:'var(--cyan)','stroke-width':3}));
+      series.forEach((point,index)=>{ const dot=svgNode('circle',{cx:coords[index][0],cy:coords[index][1],r:3,fill:'var(--cyan)'}); dot.append(svgNode('title',{},formatTime(point.timestamp)+' · '+point.datagrams+' datagrams')); svg.append(dot); });
+      svg.append(svgNode('text',{x:80,y:245},new Date(series[0].timestamp).toLocaleTimeString()),svgNode('text',{x:670,y:245,'text-anchor':'end'},new Date(series.at(-1).timestamp).toLocaleTimeString()));
+      $('monitor-graph').replaceChildren(svg); $('monitor-graph-note').textContent=sampleMode ? 'Simulated datagrams/s · rolling 60-second window' : 'Received UDP datagrams, including rejected or paused input; not packets or model detections.';
+    }
+    async function loadReports() {
+      if (reportState.loading || state.disposed) return;
+      reportState.loading = true;
+      try {
+        reportState.data = await fetchJSON('/api/reports'); reportState.error = false;
+        const id = reportState.detailId;
+        if (id) {
+          const detail = await fetchJSON('/api/reports/' + encodeURIComponent(id));
+          if (id === reportState.detailId) reportState.detail = detail;
+        }
+      } catch { reportState.error = true; }
+      finally { reportState.loading = false; }
+      if (!state.disposed && state.view === 'reports') renderReports();
+    }
+    function renderReports() {
+      $('report-provider-note').textContent = sampleMode ? 'Sample reports are illustrative; generation is disabled.' : 'Selected alert evidence is sent to Google Gemini.';
+      const data = records(), available = new Set(data.map(item => item.id));
+      for (const id of reportState.selected) if (!available.has(id)) reportState.selected.delete(id);
+      const generator = reportState.data?.generator;
+      $('report-generator').textContent = sampleMode ? 'Illustrative report · no LLM generation' : reportState.error ? 'Report service unavailable' : !generator ? 'Checking Gemini…' :
+        !generator.available ? 'Report service unavailable' : !generator.configured ? 'Gemini key required' : generator.model + ' · configured';
+      $('report-generate').disabled = sampleMode || reportState.submitting || reportState.error || !generator?.configured || !reportState.selected.size;
+      $('report-generate').textContent = reportState.submitting ? 'Submitting…' : 'Generate report';
+      $('report-selected').textContent = reportState.selected.size + ' selected · maximum 30';
+      $('report-select-all').disabled = !data.length; $('report-clear').disabled = !reportState.selected.size;
+      $('report-selection-wrap').hidden = !data.length; $('report-selection-empty').hidden = !!data.length;
+      $('report-selection-empty').replaceChildren(empty(state.alertsError ? 'Alerts unavailable' : 'No alerts available'));
+      const signature = JSON.stringify(data.map(item => item.id));
+      if (signature !== reportState.selectionSignature) {
+        reportState.selectionSignature = signature;
+        $('report-selection-rows').replaceChildren(...data.map(record => {
+          const row = el('tr'), select = el('td'), check = el('input');
+          check.type = 'checkbox'; check.checked = reportState.selected.has(record.id);
+          check.dataset.alertId = record.id;
+          check.setAttribute('aria-label', 'Select ' + record.threat_class + ' ' + record.id);
+          check.disabled = !check.checked && reportState.selected.size >= 30;
+          check.addEventListener('change', () => {
+            if (check.checked && reportState.selected.size < 30) reportState.selected.add(record.id);
+            else reportState.selected.delete(record.id);
+            renderReports();
+          });
+          select.append(check); row.append(select, el('td', '', formatTime(record.timestamp)),
+            el('td', '', record.threat_class + ' · ' + percent(record.confidence)));
+          const details = el('td'); details.append(button('Inspect alert', () => openDetails(record.id))); row.append(details); return row;
+        }));
+      }
+      for (const check of $('report-selection-rows').querySelectorAll('input')) {
+        check.checked = reportState.selected.has(check.dataset.alertId);
+        check.disabled = !check.checked && reportState.selected.size >= 30;
+      }
+      const list = reportState.data?.reports || [];
+      const currentJob = list.find(report => report.id === reportState.jobId);
+      if (currentJob) $('report-message').textContent = {
+        queued: 'Report queued.', generating: 'Generating report…', draft: 'Report ready for review.', failed: 'Report generation failed.'
+      }[currentJob.state] || '';
+      const listSignature = JSON.stringify([list, reportState.error]);
+      if (listSignature !== reportState.listSignature) {
+        reportState.listSignature = listSignature;
+        $('report-list').replaceChildren(...(list.length ? list.map(report => {
+        const row = el('div', 'report-list-row'), info = el('div');
+        info.append(el('h3', '', report.title), el('div', 'note', formatTime(report.created_at) + ' · ' + report.source_count + ' alerts · ' + report.state));
+        row.append(info, button('Open report', async () => {
+          reportState.detailId = report.id;
+          try {
+            const detail = await fetchJSON('/api/reports/' + encodeURIComponent(report.id));
+            if (reportState.detailId !== report.id) return;
+            reportState.detail = detail; renderReportDetail();
+            $('report-detail-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+          } catch { notify('Report could not be loaded.'); }
+        })); return row;
+      }) : [empty(reportState.error ? 'Reports unavailable' : 'No reports yet')]));
+      }
+      renderReportDetail();
+    }
+    function renderReportDetail() {
+      const report = reportState.detail;
+      $('report-detail-panel').hidden = !report;
+      if (!report) { reportState.detailSignature = ''; return; }
+      const signature = JSON.stringify([report.id, report.state, report.completed_at]);
+      if (signature === reportState.detailSignature) return;
+      reportState.detailSignature = signature;
+      $('report-detail-title').textContent = report.title;
+      const body = $('report-detail'); body.replaceChildren();
+      body.append(el('p', 'note', sampleMode ? 'Sample report · illustrative narrative, no LLM called' : report.state === 'draft' ? 'Draft · analyst review required' : report.state));
+      const metadata = el('dl', 'kv report-metadata');
+      metadata.append(kvRow('Created', formatTime(report.created_at)), kvRow('Report model', report.model),
+        kvRow('Alerts included', report.source_count), kvRow('Report ID', report.id), kvRow('Evidence SHA-256', report.source_sha256));
+      body.append(metadata);
+      const actions = el('div', 'actions');
+      for (const [format, label] of [['text', 'Download report'], ['json', 'Download evidence JSON']]) {
+        const link = el('a', '', label); link.href = '/api/reports/' + encodeURIComponent(report.id) + '/download?format=' + format;
+        link.setAttribute('download', ''); actions.append(link);
+      }
+      body.append(actions);
+      if (report.error) body.append(el('p', '', report.error));
+      if (report.narrative) {
+        const narrative = report.narrative;
+        body.append(el('h3', '', 'Summary'), el('p', '', narrative.summary), el('h3', '', 'Findings'));
+        for (const finding of narrative.findings) {
+          body.append(el('h3', '', finding.title), el('p', '', finding.analysis));
+          const citations = el('div', 'actions');
+          for (const ref of finding.alert_refs) citations.append(button(ref, () => {
+            const node = $('report-source-' + ref); node.open = true; node.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }));
+          body.append(citations);
+        }
+        for (const [key, label] of [['recommendations', 'Recommended checks'], ['limitations', 'Limitations']]) {
+          body.append(el('h3', '', label)); const list = el('ul');
+          for (const text of narrative[key]) list.append(el('li', '', text));
+          body.append(list);
+        }
+      }
+      body.append(el('h3', '', 'Original alert evidence'));
+      for (const source of report.sources) {
+        const record = source.alert, detail = el('details', 'report-fact'); detail.id = 'report-source-' + source.ref;
+        detail.append(el('summary', '', source.ref + ' · ' + record.threat_class + ' · ' + percent(record.confidence)));
+        const facts = el('dl', 'kv');
+        facts.append(kvRow('UTC timestamp', record.timestamp), kvRow('Flow ID', record.flow_id || '—'), kvRow('Severity', record.severity),
+          kvRow('Detector model', record.model_version || 'Not supplied'), kvRow('Alert ID', record.id));
+        detail.append(facts, el('h3', '', 'Evidence features'), evidenceRows(record.evidence || {}),
+          el('h3', '', 'Exact source record'), el('pre', '', JSON.stringify(record, null, 2)));
+        body.append(detail);
+      }
+    }
+    async function submitReport(event) {
+      event.preventDefault(); if (reportState.submitting || !reportState.selected.size) return;
+      if (sampleMode) return;
+      reportState.submitting = true; $('report-message').textContent = ''; renderReports();
+      try {
+        const response = await fetch('/api/reports', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: $('report-title').value.trim(), alert_ids: [...reportState.selected] }) });
+        const result = await response.json();
+        if (!response.ok) throw new Error(typeof result.detail === 'string' ? result.detail : 'Report request is invalid.');
+        reportState.detailId = result.id; reportState.jobId = result.id; reportState.detail = result; reportState.selected.clear();
+        $('report-message').textContent = 'Report queued.'; await loadReports();
+      } catch (error) { $('report-message').textContent = error.message || 'Report request failed.'; }
+      finally { reportState.submitting = false; renderReports(); }
+    }
+    function csvCell(value) {
+      let text = typeof value === 'object' && value !== null ? JSON.stringify(value) : String(value ?? '');
+      // Prevent sensor-controlled strings from becoming spreadsheet formulas.
+      if (/^[\s]*[=+@-]/.test(text)) text = "'" + text;
+      return '"' + text.replaceAll('"', '""') + '"';
+    }
+    function exportCSV() {
+      const data = state.view === 'alerts' ? filteredRecords() : records();
+      if (!data.length) { notify('There are no displayed alerts to export.'); return; }
+      const keys = ['id', 'timestamp', 'flow_id', 'input_id', 'threat_class', 'severity', 'confidence', 'evidence', 'visibility', 'model_version'];
+      const lines = [keys.join(','), ...data.map(record => keys.map(key => csvCell(record[key])).join(','))];
+      const url = URL.createObjectURL(new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' }));
+      const link = el('a'); link.href = url; link.download = 'drashta-'+(sampleMode ? 'sample-' : '')+'alerts-' + new Date().toISOString().slice(0, 10) + '.csv';
+      document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+      notify('CSV download prepared for ' + number(data.length) + ' alerts.');
+    }
+    async function fetchJSON(path) {
+      if (sampleMode && path !== '/health') return DrashtaPreview.read(path);
+      const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 8000);
+      try {
+        const response = await fetch(path, { cache: 'no-store', signal: controller.signal });
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        return await response.json();
+      } finally { clearTimeout(timer); }
+    }
+    async function loadAlerts() {
+      const request = ++alertsRequest;
+      try {
+        const data = await fetchJSON('/api/alerts?limit=100');
+        if (request !== alertsRequest || state.disposed) return;
+        mergeRecords(data.alerts); state.source = data.source; state.alertsLoaded = true; state.alertsError = false;
+      } catch { if (request === alertsRequest) state.alertsError = true; }
+      render();
+    }
+    async function loadStats() {
+      const request = ++statsRequest;
+      try {
+        const data = await fetchJSON('/api/stats');
+        if (request !== statsRequest || state.disposed) return;
+        state.stats = data; state.source = data.source; state.statsError = false;
+      } catch { if (request === statsRequest) state.statsError = true; }
+      render();
+    }
+    async function loadHealth() {
+      const request = ++healthRequest;
+      try {
+        const data = await fetchJSON('/health');
+        if (request !== healthRequest || state.disposed) return;
+        const historyChanged = state.health && state.health.postgres !== data.postgres;
+        state.health = data; state.healthAt = new Date().toISOString(); state.healthError = false;
+        if (historyChanged) loadStats();
+      } catch { if (request === healthRequest) state.healthError = true; }
+      render();
+    }
+    function scheduleStats() {
+      if (statsTimer) return;
+      statsTimer = setTimeout(() => { statsTimer = null; loadStats(); }, 150);
+    }
+    async function refreshAll() {
+      $('refresh').disabled = true; $('refresh').textContent = 'Refreshing…';
+      await Promise.allSettled([loadAlerts(), loadStats(), loadHealth(), loadIngest(), ...(state.view === 'reports' ? [loadReports()] : [])]);
+      $('refresh').disabled = false; $('refresh').textContent = 'Refresh data';
+    }
+    function connectSocket() {
+      if (sampleMode || state.disposed) return;
+      const socket = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws');
+      state.socket = socket;
+      socket.onopen = () => {
+        if (socket !== state.socket) return;
+        const reconnect = state.everConnected;
+        state.connected = true; state.everConnected = true; render();
+        if (reconnect) refreshAll();
+      };
+      socket.onmessage = event => {
+        if (socket !== state.socket) return;
+        try {
+          const record = JSON.parse(event.data);
+          if (!validRecord(record)) return;
+          mergeRecords([record], true); render(); scheduleStats();
+        } catch { notify('A live message could not be read. Refresh data to reconcile the recent feed.'); }
+      };
+      socket.onclose = () => {
+        if (socket !== state.socket || state.disposed) return;
+        state.connected = false; render(); clearTimeout(reconnectTimer);
+        reconnectTimer = setTimeout(connectSocket, 2000);
+      };
+      socket.onerror = () => socket.close();
+    }
+    function updateClock() {
+      $('clock-time').textContent = formatTime(Date.now()); $('clock-time').dateTime = new Date().toISOString();
+      $('clock-zone').textContent = Intl.DateTimeFormat().resolvedOptions().timeZone + ' · local time';
+    }
+    for (const [cls] of THREATS) { const option = el('option', '', cls); option.value = cls; $('class-filter').append(option); }
+    for (const [cls] of THREATS) { const option = el('option', '', cls); option.value = cls; $('analytics-class').append(option); }
+    for (const [cls] of THREATS.filter(([cls])=>cls!=='BENIGN')) { const option = el('option', '', cls); option.value = cls; $('history-class').append(option); }
+    $('history-form').addEventListener('submit', event => { event.preventDefault(); loadHistory(); });
+    $('history-alert-id').addEventListener('input', () => { investigationState.historyIP = null; });
+    $('history-reset').addEventListener('click', () => { $('history-form').reset(); investigationState.historyIP = null; loadHistory(); });
+    $('history-refresh').addEventListener('click', () => loadHistory());
+    $('history-more').addEventListener('click', () => loadHistory(true));
+    $('analytics-class').addEventListener('change', event => { state.analyticsClass = event.target.value; render(); });
+    $('analytics-metric').addEventListener('change', event => { state.analyticsMetric = event.target.value; render(); });
+    $('ingest-form').addEventListener('submit', uploadInput);
+    $('report-form').addEventListener('submit', submitReport);
+    $('report-refresh').addEventListener('click', loadReports);
+    $('report-select-all').addEventListener('click', () => { reportState.selected = new Set(records().slice(0, 30).map(item => item.id)); renderReports(); });
+    $('report-clear').addEventListener('click', () => { reportState.selected.clear(); renderReports(); });
+    $('report-detail-close').addEventListener('click', () => { reportState.detail = null; reportState.detailId = null; renderReportDetail(); });
+    $('overview-threats').addEventListener('click',()=>setView('threats',true));
+    $('threat-specialized-close').addEventListener('click',()=>{selectedThreatCategory=null;renderThreats();});
+    $('close-threat-investigation').addEventListener('click',()=>{selectedThreatRecord=null;selectedThreatRendered=null;renderAnalytics();});
+    $('data-mode').value=sampleMode ? 'sample':'actual';
+    $('data-mode').addEventListener('change',event=>{try{localStorage.setItem('drashta-data-mode',event.target.value);location.reload();}catch{notify('Browser storage is unavailable; data mode could not be saved.');}});
+    if(sampleMode){
+      for(const id of ['input-file','input-format','upload-input']) $(id).disabled=true;
+      $('input-message').textContent='Switch Data to Actual input to upload a capture or flow export.';
+      document.addEventListener('click',async event=>{
+        const link=event.target.closest('a[href]');if(!link)return;const url=new URL(link.href,location.href);
+        if(url.origin!==location.origin||!url.pathname.startsWith('/api/'))return;event.preventDefault();
+        try{const file=await DrashtaPreview.download(url.pathname+url.search),blob=URL.createObjectURL(new Blob([file.body],{type:file.mime})),download=el('a');download.href=blob;download.download=file.name;document.body.append(download);download.click();download.remove();setTimeout(()=>URL.revokeObjectURL(blob),1000);}catch(error){notify(error.message);}
+      });
+    }
+    $('input-format').addEventListener('change', renderIngest);
+    $('monitor-toggle').addEventListener('click', toggleMonitor);
+    $('refresh-inputs').addEventListener('click', loadIngest);
+    document.querySelectorAll('[data-view]').forEach(node => node.addEventListener('click', () => setView(node.dataset.view, true)));
+    $('nav-previous').addEventListener('click', () => scrollNavigation(-1));
+    $('nav-next').addEventListener('click', () => scrollNavigation(1));
+    $('dashboard-navigation').addEventListener('scroll', updateNavigation, {passive:true});
+    const navigationObserver = new ResizeObserver(() => {
+      updateNavigation();
+      document.querySelector('.nav-button[aria-current="page"]')?.scrollIntoView({block:'nearest',inline:'nearest'});
+    });
+    navigationObserver.observe(document.querySelector('.navigation-row'));
+    navigationObserver.observe($('dashboard-navigation'));
+    $('view-all').addEventListener('click', () => setView('alerts', true));
+    $('open-system').addEventListener('click', () => setView('system', true));
+    $('banner-system').addEventListener('click', () => setView('system', true));
+    $('refresh').addEventListener('click', refreshAll); $('export').addEventListener('click', exportCSV);
+    $('check-health').addEventListener('click', async () => { $('check-health').disabled = true; await loadHealth(); $('check-health').disabled = false; });
+    $('search').addEventListener('input', event => { state.search = event.target.value; clearTimeout(searchTimer); searchTimer = setTimeout(render, 100); });
+    $('class-filter').addEventListener('change', event => { state.classFilter = event.target.value; render(); });
+    $('severity-filter').addEventListener('change', event => { state.band = event.target.value; render(); });
+    $('hide-benign').addEventListener('change', event => { state.hideBenign = event.target.checked; render(); });
+    $('reset-filters').addEventListener('click', () => {
+      state.search = ''; state.classFilter = 'all'; state.band = 'all'; state.hideBenign = false;
+      $('search').value = ''; $('class-filter').value = 'all'; $('severity-filter').value = 'all'; $('hide-benign').checked = false; render();
+    });
+    $('pause-feed').addEventListener('click', () => {
+      state.paused = !state.paused;
+      if (state.paused) { state.frozen = records(); state.waiting = 0; }
+      else { state.frozen = []; state.waiting = 0; }
+      render();
+    });
+    $('close-dialog').addEventListener('click', () => $('alert-dialog').close());
+    $('alert-dialog').addEventListener('close', () => { state.selected = null; });
+    document.querySelector('.skip-link').addEventListener('click', event => {
+      event.preventDefault(); $('main').focus({ preventScroll: true }); window.scrollTo(0, 0);
+    });
+    window.addEventListener('hashchange', () => setView(location.hash.slice(1)));
+    const clockInterval = setInterval(updateClock, 1000), healthInterval = setInterval(loadHealth, 30000);
+    const ingestInterval = setInterval(loadIngest, sampleMode ? 1000 : 2000);
+    const reportInterval = setInterval(() => { if (state.view === 'reports') loadReports(); }, 3000);
+    const investigationInterval=setInterval(()=>{if(state.view==='analytics')loadHeatmap();},5000);
+    window.addEventListener('beforeunload', () => {
+      state.disposed = true; clearTimeout(reconnectTimer); clearTimeout(statsTimer); clearTimeout(toastTimer); clearTimeout(searchTimer);
+      clearInterval(clockInterval); clearInterval(healthInterval); clearInterval(ingestInterval); clearInterval(reportInterval); state.socket?.close();
+      clearInterval(investigationInterval);clearTimeout(chartResizeTimer);
+      navigationObserver.disconnect();
+    });
+    let chartResizeTimer;
+    window.addEventListener('resize',()=>{clearTimeout(chartResizeTimer);chartResizeTimer=setTimeout(()=>{state.analyticsSignature=null;render();},150);});
+    updateClock(); setView(location.hash.slice(1) || 'overview'); connectSocket(); refreshAll();
+  </script>
+</body>
+</html>

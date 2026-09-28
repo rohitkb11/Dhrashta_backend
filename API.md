@@ -83,7 +83,7 @@ The server does not send empty history or heartbeat messages as alerts. Slow cli
 
 ## GET / and API documentation
 
-`/` returns backend service metadata. `/docs`, `/redoc` and `/openapi.json` expose API documentation and schemas. No dashboard or frontend assets are included in this repository. A separate frontend can consume the management HTTP APIs and `/ws`.
+`/` serves the dashboard; `/assets/` serves its local JavaScript modules. `/docs`, `/redoc` and `/openapi.json` expose API documentation and schemas. The dashboard consumes the management HTTP APIs and `/ws`.
 
 ## Evidence reports
 

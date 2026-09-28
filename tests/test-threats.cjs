@@ -1,0 +1,17 @@
+const assert = require('node:assert/strict');
+global.window = {};
+require('../backend/static/threats.js');
+const { categories, values } = window.DrashtaThreats;
+assert.equal(categories.length, 6);
+assert.equal(new Set(categories.flatMap(item => item.classes)).size, 8);
+assert.ok(!categories.flatMap(item => item.classes).includes('BENIGN'));
+const numeric = categories[0].metrics[0];
+assert.deepEqual(values([{evidence:{packets_per_second:0}},{evidence:{packets_per_second:null}},{evidence:{packets_per_second:'5'}},{evidence:{packets_per_second:Infinity}},{evidence:{}}], numeric).map(item=>item.value), [0]);
+const fingerprints = categories[3].metrics[0];
+assert.equal(values([{evidence:{ja3:'sample-a',ja4:'sample-b'}}], fingerprints).length, 2);
+const distribution = categories[2].metrics[2];
+assert.equal(values([{evidence:{character_distribution:{letters:4,digits:0}}},{evidence:{character_distribution:{letters:-1}}}], distribution).length, 1);
+const sequence = categories[3].metrics[1];
+assert.equal(values([{evidence:{packet_sizes:[64,1200]}},{evidence:{packet_sizes:[64,NaN]}}], sequence).length, 1);
+assert.equal(values([{evidence:{}}], categories[2].metrics[3]).length, 0);
+console.log('Six threat categories and supplied-evidence validation passed.');

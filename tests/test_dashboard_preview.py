@@ -1,6 +1,14 @@
-"""Retained-history BENIGN filtering; isolated fixtures only."""
+"""Assets and retained-history drill-downs; isolated fixtures only."""
 import app as receiver
 from test_backend import client, post, postgres_down
+
+
+def test_local_chart_and_preview_assets(client):
+    for name in ("charts.js", "preview.js", "threats.js"):
+        response = client.get("/assets/" + name)
+        assert response.status_code == 200
+        assert "javascript" in response.headers["content-type"]
+    assert client.get("/api/history?alert_id=sample-alert-0001").json()["total"] == 0
 
 
 def test_heatmap_history_excludes_benign_in_both_stores(client, monkeypatch):
